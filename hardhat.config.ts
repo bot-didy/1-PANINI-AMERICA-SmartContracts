@@ -3,7 +3,7 @@ import "@nomicfoundation/hardhat-toolbox";
 require('dotenv').config({path:__dirname+'/.env'})
 
 const privateKey : any = process.env.PRIVATE_KEY;
-console.log(privateKey,'privateKey')
+
 const config: HardhatUserConfig = {
   sourcify: {
     enabled: true
