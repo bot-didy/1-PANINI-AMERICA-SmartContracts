@@ -5,18 +5,16 @@
 import { buildModule } from "@nomicfoundation/hardhat-ignition/modules";
 
 
-const nftModule = buildModule("nftModule", (erc721) => {
+const nftModule = buildModule("nftERC721C", (erc721) => {
  
   const collectionName = 'Phoenix NFTs'
   const collectionSymbol = 'PNFTs'
   const defaultAdmin = '0x7fa859B1E10782Ae660154F9e6b62Df8E2561476'
-  const contractAddress = erc721.contract("PhoenixSports", [defaultAdmin,collectionName,collectionSymbol], {});
+  const contractAddress = erc721.contract("PhoenixSports", [defaultAdmin,1000,collectionName,collectionSymbol], {});
   return { contractAddress };
 
 });
 
 export default nftModule;
 
-// npx hardhat ignition deploy ./ignition/modules/Lock.js --network <your-network>
-
-
+// npx hardhat ignition deploy ./ignition/modules/deploy.ts --network <your-network>

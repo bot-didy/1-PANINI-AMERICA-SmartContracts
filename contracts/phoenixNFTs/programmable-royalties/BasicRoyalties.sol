@@ -18,17 +18,11 @@ abstract contract BasicRoyaltiesBase is ERC2981 {
         emit DefaultRoyaltySet(receiver, feeNumerator);
     }
 
-    function updateDefaultRoyalty(address receiver, uint96 feeNumerator) public virtual  {
-        super._setDefaultRoyalty(receiver, feeNumerator);
-        emit DefaultRoyaltySet(receiver, feeNumerator);
-    }
-
     function _setTokenRoyalty(uint256 tokenId, address receiver, uint96 feeNumerator) internal virtual override {
         super._setTokenRoyalty(tokenId, receiver, feeNumerator);
         emit TokenRoyaltySet(tokenId, receiver, feeNumerator);
     }
 }
-
 
 /**
  * @title BasicRoyalties

@@ -141,4 +141,3 @@ abstract contract ERC2981 is IERC2981, ERC165 {
         delete _tokenRoyaltyInfo[tokenId];
     }
 }
-

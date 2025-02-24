@@ -1,80 +1,98 @@
 // SPDX-License-Identifier: MIT
-// Compatible with OpenZeppelin Contracts ^5.0.0
-pragma solidity ^0.8.22;
+pragma solidity ^0.8.4;
 
+import "./openzeppelin/contracts/access/OwnableBasic.sol";
+import "./limitbreak/ERC721C.sol";
+import "./programmable-royalties/BasicRoyalties.sol";
 import {AccessControl} from "./openzeppelin/contracts/access/AccessControl.sol";
-import {Ownable} from "./openzeppelin/contracts/access/Ownable.sol";
-import {ERC721} from "./openzeppelin/contracts/token/ERC721/ERC721.sol";
-import {ERC721Burnable} from "./openzeppelin/contracts/token/ERC721/extensions/ERC721Burnable.sol";
-import {ERC721Enumerable} from "./openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
-import {ERC721Pausable} from "./openzeppelin/contracts/token/ERC721/extensions/ERC721Pausable.sol";
-import {ERC721URIStorage} from "./openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
-import {ERC2981} from "./openzeppelin/contracts/token/common/ERC2981.sol";
-import {BasicRoyalties} from "./programmable-royalties/BasicRoyalties.sol";
 
+/**
+ * @title ERC721CWithBasicRoyalties
+ * @author Limit Break, Inc.
+ * @notice Extension of ERC721C that adds basic royalties support.
+ * @dev These contracts are intended for example use and are not intended for production deployments as-is.
+ */
+contract PhoenixSports  is OwnableBasic, ERC721C, AccessControl, BasicRoyalties {
 
-contract PhoenixSports is ERC721, ERC721Enumerable, ERC721URIStorage, ERC721Pausable,Ownable, AccessControl, ERC721Burnable, BasicRoyalties {
-    bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
-    bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
+    bytes32 public constant PANINI_NFT_OPERATOR = keccak256("PANINI_NFT_OPERATOR");
 
-    constructor(string memory name,string memory symbol,address defaultAdmin,address royaltyAdmin,uint96 royaltyFee)
-        ERC721(name, symbol)
-        Ownable(defaultAdmin)        
-        BasicRoyalties (royaltyAdmin, royaltyFee)
-    {
-        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        _grantRole(PAUSER_ROLE, defaultAdmin);
-        _grantRole(MINTER_ROLE, defaultAdmin);
+    constructor(
+        address royaltyReceiver_,
+        uint96 royaltyFeeNumerator_,
+        string memory name_,
+        string memory symbol_)
+        ERC721OpenZeppelin(name_, symbol_)
+        Ownable(_msgSender())
+        BasicRoyalties(royaltyReceiver_, royaltyFeeNumerator_) {
+
+        _grantRole(DEFAULT_ADMIN_ROLE, _msgSender());
+        _grantRole(PANINI_NFT_OPERATOR, _msgSender());
+
     }
 
-    function pause() public onlyRole(PAUSER_ROLE) {
-        _pause();
+    function supportsInterface(bytes4 interfaceId) public view virtual override(ERC721C,AccessControl, ERC2981) returns (bool) {
+        return ERC721C.supportsInterface(interfaceId) ||
+            ERC2981.supportsInterface(interfaceId);
     }
 
-    function unpause() public onlyRole(PAUSER_ROLE) {
-        _unpause();
-    }
 
-    function safeMint(address to, uint256 tokenId, string memory uri)
-        public
-        onlyRole(MINTER_ROLE)
-    {
+    function safeMint(address to, uint256 tokenId, string memory uri) public onlyRole(PANINI_NFT_OPERATOR){
+        require(!_exists(tokenId), "Token ID already exists");
         _safeMint(to, tokenId);
         _setTokenURI(tokenId, uri);
     }
 
-    // The following functions are overrides required by Solidity.
-    
-    function _update(address to, uint256 tokenId, address auth)
-        internal
-        override(ERC721, ERC721Enumerable, ERC721Pausable)
-        returns (address)
-    {
-        return super._update(to, tokenId, auth);
+
+    function batchMint(address to, uint256[] memory tokenIds, string[] memory uris) external onlyRole(PANINI_NFT_OPERATOR) {
+        require(to != address(0), "Invalid recipient");
+        require(
+            tokenIds.length == uris.length,
+            "Token IDs and URIs length mismatch"
+        );
+
+        for (uint256 i = 0; i < tokenIds.length; i++) {
+            require(!_exists(tokenIds[i]), "Token ID already exists");
+            _mint(to, tokenIds[i]);
+            _setTokenURI(tokenIds[i], uris[i]);
+        }
     }
 
-    function _increaseBalance(address account, uint128 value)
-        internal
-        override(ERC721, ERC721Enumerable)
-    {
-        super._increaseBalance(account, value);
+    function batchSafeTransfer(address from, address to, uint256[] memory tokenIds) external onlyRole(PANINI_NFT_OPERATOR) {
+        require(to != address(0), "Invalid recipient");
+        require(tokenIds.length > 0, "No token IDs provided");
+
+        for (uint256 i = 0; i < tokenIds.length; i++) {
+            require(
+                _isAuthorized(_msgSender(), from, tokenIds[i]),
+                "Caller is not owner nor approved"
+            );
+            super.safeTransferFrom(from, to, tokenIds[i]);
+        }
     }
 
-    function tokenURI(uint256 tokenId)
-        public
-        view
-        override(ERC721, ERC721URIStorage)
-        returns (string memory)
-    {
-        return super.tokenURI(tokenId);
+
+    function burn(uint256 tokenId) public virtual override  {
+        _burn(tokenId);
     }
 
-    function supportsInterface(bytes4 interfaceId)
-        public
-        view
-        override(ERC721, ERC721Enumerable, ERC721URIStorage, AccessControl, ERC2981)
-        returns (bool)
-    {
-        return super.supportsInterface(interfaceId);
+    function pause() public onlyRole(PANINI_NFT_OPERATOR) {
+        _pause();
     }
+
+    function unpause() public onlyRole(PANINI_NFT_OPERATOR) {
+        _unpause();
+    }
+
+    function setDefaultRoyalty(address receiver, uint96 feeNumerator) public {
+        _requireCallerIsContractOwner();
+        _setDefaultRoyalty(receiver, feeNumerator);
+    }
+
+    function setTokenRoyalty(uint256 tokenId, address receiver, uint96 feeNumerator) public {
+        _requireCallerIsContractOwner();
+        _setTokenRoyalty(tokenId, receiver, feeNumerator);
+    }
+
+
+
 }

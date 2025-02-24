@@ -4,6 +4,7 @@
 pragma solidity ^0.8.20;
 
 import {Context} from "../utils/Context.sol";
+import "hardhat/console.sol";
 
 /**
  * @dev Contract module which allows children to implement an emergency stop
@@ -100,7 +101,7 @@ abstract contract Pausable is Context {
      *
      * - The contract must not be paused.
      */
-    function _pause() internal virtual whenNotPaused {
+    function _pause() internal virtual whenNotPaused  {
         _paused = true;
         emit Paused(_msgSender());
     }
