@@ -31,7 +31,7 @@ abstract contract ERC721Pausable is ERC721, Pausable {
         address to,
         uint256 tokenId,
         address auth
-    ) internal virtual override whenNotPaused returns (address) {
+    ) internal virtual override whenNotPaused(to) returns (address) {
         return super._update(to, tokenId, auth);
     }
 }

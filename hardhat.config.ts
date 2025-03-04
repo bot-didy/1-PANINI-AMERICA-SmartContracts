@@ -35,17 +35,17 @@ const config: HardhatUserConfig = {
       sepolia: process.env.SEPOLIASCAN_API_KEY || ''
 
     },
-    // if want can custom networks
-    // customChains: [
-    //   {
-    //     network: "polygonAmoy",
-    //     chainId: 80002,
-    //     urls: {
-    //       apiURL: "https://api-amoy.polygonscan.com/api",
-    //       browserURL: "https://amoy.polygonscan.com"
-    //     },
-    //   }
-    // ]
+    // For custom networks
+    customChains: [
+      {
+        network: "polygonAmoy",
+        chainId: 80002,
+        urls: {
+          apiURL: "https://api-amoy.polygonscan.com/api",
+          browserURL: "https://amoy.polygonscan.com"
+        },
+      }
+    ]
   },
 
   solidity: {

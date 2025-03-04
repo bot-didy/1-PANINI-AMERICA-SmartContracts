@@ -41,7 +41,10 @@ abstract contract CreatorTokenBase is OwnablePermissions, TransferValidation, IC
     error CreatorTokenBase__InvalidTransferValidatorContract();
 
     /// @dev The default transfer validator that will be used if no transfer validator has been set by the creator.
-    address public constant DEFAULT_TRANSFER_VALIDATOR = address(0xA000027A9B2802E1ddf7000061001e5c005A0000);
+    // address public constant DEFAULT_TRANSFER_VALIDATOR = address(0xA000027A9B2802E1ddf7000061001e5c005A0000);
+    // address public constant DEFAULT_TRANSFER_VALIDATOR = address(0x721C002B0059009a671D00aD1700c9748146cd1B);
+    address public constant DEFAULT_TRANSFER_VALIDATOR = address(0x721C0078c2328597Ca70F5451ffF5A7B38D4E947);
+
 
     /// @dev Used to determine if the default transfer validator is applied.
     /// @dev Set to true when the creator sets a transfer validator address.

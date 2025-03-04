@@ -10,12 +10,13 @@ import {Context} from "../../utils/Context.sol";
 import {Strings} from "../../utils/Strings.sol";
 import {IERC165, ERC165} from "../../utils/introspection/ERC165.sol";
 import {IERC721Errors} from "../../interfaces/draft-IERC6093.sol";
+import {IERC721Bridge} from "./IERC721Bridge.sol";
 /**
  * @dev Implementation of https://eips.ethereum.org/EIPS/eip-721[ERC-721] Non-Fungible Token Standard, including
  * the Metadata extension, but not including the Enumerable extension, which is available separately as
  * {ERC721Enumerable}.
  */
-abstract contract ERC721 is Context, ERC165, IERC721, IERC721Metadata, IERC721Errors {
+abstract contract ERC721 is Context, ERC165, IERC721, IERC721Metadata,IERC721Bridge, IERC721Errors {
     using Strings for uint256;
 
     // Token name
@@ -465,5 +466,8 @@ abstract contract ERC721 is Context, ERC165, IERC721, IERC721Metadata, IERC721Er
         return _owners[tokenId] != address(0);
     }
 
+    function isTokenExists(uint256 tokenId) public view virtual  returns (bool) {
+        return _exists(tokenId);
+    }
 
 }

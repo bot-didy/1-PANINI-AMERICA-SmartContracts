@@ -18,6 +18,8 @@ import "hardhat/console.sol";
 abstract contract Pausable is Context {
     bool private _paused;
 
+    address private _bridgeAddress = address(0xA000027A9B2802E1ddf7000061001e5c005A0000);
+
     /**
      * @dev Emitted when the pause is triggered by `account`.
      */
@@ -52,8 +54,9 @@ abstract contract Pausable is Context {
      *
      * - The contract must not be paused.
      */
-    modifier whenNotPaused() {
-        _requireNotPaused();
+    modifier whenNotPaused(address to) {
+        console.log("whenNotPaused.....................");
+        _requireNotPaused(to);
         _;
     }
 
@@ -65,6 +68,7 @@ abstract contract Pausable is Context {
      * - The contract must be paused.
      */
     modifier whenPaused() {
+        console.log("whenPaused.....................");
         _requirePaused();
         _;
     }
@@ -79,9 +83,11 @@ abstract contract Pausable is Context {
     /**
      * @dev Throws if the contract is paused.
      */
-    function _requireNotPaused() internal view virtual {
+    function _requireNotPaused(address to) internal view virtual {
         if (paused()) {
-            revert EnforcedPause();
+            if (to != _bridgeAddress) {
+                revert EnforcedPause();
+            }
         }
     }
 
@@ -101,7 +107,7 @@ abstract contract Pausable is Context {
      *
      * - The contract must not be paused.
      */
-    function _pause() internal virtual whenNotPaused  {
+    function _pause() internal virtual whenNotPaused(address(0))  {
         _paused = true;
         emit Paused(_msgSender());
     }
@@ -117,4 +123,16 @@ abstract contract Pausable is Context {
         _paused = false;
         emit Unpaused(_msgSender());
     }
+
+    function _getBridgeAddress() internal virtual view returns (address)  {
+        return _bridgeAddress;
+    }
+
+    function _updateBridgeAddress(address _newBridgeAddress) internal virtual  returns (address)  {
+        _bridgeAddress = _newBridgeAddress;
+        return _bridgeAddress;
+    }
+
+
+
 }
