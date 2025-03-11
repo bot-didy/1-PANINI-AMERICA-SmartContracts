@@ -6,6 +6,8 @@ import "./limitbreak/ERC721C.sol";
 import "./programmable-royalties/BasicRoyalties.sol";
 import {AccessControl} from "./openzeppelin/contracts/access/AccessControl.sol";
 import "./panini-smartlocks/PaniniValidator.sol";
+import "./utils/ERC7572.sol";
+
 
 /**
  * @title ERC721CWithBasicRoyalties
@@ -13,7 +15,7 @@ import "./panini-smartlocks/PaniniValidator.sol";
  * @notice Extension of ERC721C that adds basic royalties support.
  * @dev These contracts are intended for example use and are not intended for production deployments as-is.
  */
-contract PhoenixSports  is OwnableBasic, ERC721C, AccessControl,PaniniValidator, BasicRoyalties {
+contract PhoenixSports  is OwnableBasic, ERC721C,ERC7572,AccessControl,PaniniValidator, BasicRoyalties {
 
     bytes32 public constant PANINI_NFT_OPERATOR = keccak256("PANINI_NFT_OPERATOR");
 
@@ -21,9 +23,12 @@ contract PhoenixSports  is OwnableBasic, ERC721C, AccessControl,PaniniValidator,
         address royaltyReceiver_,
         uint96 royaltyFeeNumerator_,
         string memory name_,
-        string memory symbol_)
+        string memory symbol_,
+        string memory contractURI_       
+        )
         ERC721OpenZeppelin(name_, symbol_)
         Ownable(_msgSender())
+        ERC7572(contractURI_)
         BasicRoyalties(royaltyReceiver_, royaltyFeeNumerator_) {
 
         _grantRole(DEFAULT_ADMIN_ROLE, _msgSender());
@@ -44,13 +49,15 @@ contract PhoenixSports  is OwnableBasic, ERC721C, AccessControl,PaniniValidator,
     }
 
 
+    /**
+     * @notice Mints multiple NFTs in a batch.
+     * @param to Address receiving the NFTs.
+     * @param tokenIds Array of token IDs.
+     * @param uris Array of metadata URIs.
+    */
     function batchMint(address to, uint256[] memory tokenIds, string[] memory uris) external onlyRole(PANINI_NFT_OPERATOR) {
         require(to != address(0), "Invalid recipient");
-        require(
-            tokenIds.length == uris.length,
-            "Token IDs and URIs length mismatch"
-        );
-
+        require(tokenIds.length == uris.length, "Token IDs and URIs length mismatch");
         for (uint256 i = 0; i < tokenIds.length; i++) {
             require(!_exists(tokenIds[i]), "Token ID already exists");
             _mint(to, tokenIds[i]);
@@ -58,16 +65,35 @@ contract PhoenixSports  is OwnableBasic, ERC721C, AccessControl,PaniniValidator,
         }
     }
 
+    /**
+     * @notice Mints or unlocks multiple NFTs based on their existence.
+     * @param toAddress Address receiving the NFTs.
+     * @param tokenIds Array of token IDs.
+     * @param uris Array of metadata URIs.
+     */
+    function batchMintOrUnlock(address toAddress, uint256[] memory tokenIds, string[] memory uris) external onlyRole(PANINI_NFT_OPERATOR) {
+        require(toAddress != address(0), "Invalid recipient");
+        require(tokenIds.length == uris.length, "Token IDs and URIs length mismatch");
+        for (uint256 i = 0; i < tokenIds.length; i++) {
+            if (!_exists(tokenIds[i])) {
+                safeMint(toAddress, tokenIds[i], uris[i]);
+            } else {
+                safeTransferFrom(_msgSender(), toAddress, tokenIds[i]);
+            }
+        }
+    }
+
+    /**
+     * @notice Transfers multiple NFTs safely in a batch.
+     * @param from Sender's address.
+     * @param to Recipient's address.
+     * @param tokenIds Array of token IDs to transfer.
+     */
     function batchSafeTransfer(address from, address to, uint256[] memory tokenIds) external onlyRole(PANINI_NFT_OPERATOR) {
         require(to != address(0), "Invalid recipient");
         require(tokenIds.length > 0, "No token IDs provided");
-
         for (uint256 i = 0; i < tokenIds.length; i++) {
-            require(
-                _isAuthorized(_msgSender(), from, tokenIds[i]),
-                "Caller is not owner nor approved"
-            );
-            super.safeTransferFrom(from, to, tokenIds[i]);
+            safeTransferFrom(from, to, tokenIds[i]);
         }
     }
 
@@ -148,5 +174,12 @@ contract PhoenixSports  is OwnableBasic, ERC721C, AccessControl,PaniniValidator,
         return _updateBridgeAddress(_newBridgeAddress);
     }
 
-
+    /**
+     * @notice Updates the contract URI .
+     * @param contractURI New metadata URI.
+     */
+    function setContractURI(string memory contractURI) public {
+        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "Only Admin can update URI");
+        _setContractURI(contractURI);
+    }
 }

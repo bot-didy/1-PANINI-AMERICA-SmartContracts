@@ -5,12 +5,13 @@
 import { buildModule } from "@nomicfoundation/hardhat-ignition/modules";
 
 
-const nftModule = buildModule("vnftERC721C", (erc721) => {
+const nftModule = buildModule("aiERC721C", (erc721) => {
  
-  const collectionName = 'vNFTs'
-  const collectionSymbol = 'vNFTs'
+  const collectionName = 'AI Creatures'
+  const collectionSymbol = 'AICr'
   const defaultAdmin = '0x7fa859B1E10782Ae660154F9e6b62Df8E2561476'
-  const contractAddress = erc721.contract("PhoenixSports", [defaultAdmin,1000,collectionName,collectionSymbol], {});
+  const contractUri  = 'https://pink-junior-peacock-757.mypinata.cloud/ipfs/bafkreidg2zxe65hf234xwxbvn3fwibgg4i4yhytzmtmy5ondvld3pdhf5q'
+  const contractAddress = erc721.contract("PhoenixSports", [defaultAdmin,1000,collectionName,collectionSymbol,contractUri], {});
   return { contractAddress };
 
 });

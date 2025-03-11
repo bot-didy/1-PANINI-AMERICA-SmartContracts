@@ -5,7 +5,7 @@
 import { buildModule } from "@nomicfoundation/hardhat-ignition/modules";
 
 
-const bridgeModule = buildModule("pBridge", (erc721) => {
+const bridgeModule = buildModule("BridgeV2", (erc721) => {
  
   const bridgeSigner = '0x7fa859B1E10782Ae660154F9e6b62Df8E2561476'
   const bridgeOwner = '0x7fa859B1E10782Ae660154F9e6b62Df8E2561476'

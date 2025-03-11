@@ -1,182 +1,120 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.4;
 
-import "./interfaces/IERC721.sol";
+import "./interfaces/IERC721Bridge.sol";
+import "./interfaces/IERC721Receiver.sol";
 import "./cryptography/verifyByteSignature.sol";
 import "./access/Ownable.sol";
 import "./cryptography/ECDSA.sol";
-// import "hardhat/console.sol";
 
-contract NFTBridge is Ownable, VerifyByteSignature {
+/**
+ * @title NFTBridge
+ * @dev A contract for bridging ERC721 NFTs across blockchain networks.
+ * Allows minting/unlocking and locking of NFTs with signature verification.
+ */
+contract NFTBridge is Ownable, VerifyByteSignature, IERC721Receiver {
     using ECDSA for bytes32;
 
+    /// @notice Address of the authorized bridge signer
     address public bridgeSigner;
-    mapping(address => mapping(uint256 => bool)) public lockedTokens;
+
+    /// @notice Mapping to track whitelisted NFT collections
     mapping(address => bool) public whiteListedCollection;
+
+    /// @notice Mapping to track used nonces to prevent replay attacks
     mapping(uint256 => bool) public usedNonces;
 
-    event NFTMinted(address indexed collection,address indexed owner,uint256 tokenId);
-    event NFTLocked(address indexed collection, uint256 tokenId);
-    event NFTUnlocked(address indexed collection,address indexed owner,uint256 tokenId);
-
+    /// @notice Event emitted when NFTs are minted or unlocked
+    event NFTBatchMintedOrUnlocked(address indexed collection, address indexed owner, uint256[] tokenIds);
+    
+    /// @notice Event emitted when NFTs are locked for bridging
+    event NFTBatchLocked(address indexed collection, address indexed owner, uint256[] tokenIds);
 
     /**
-     * @dev Initializes the contract with a bridge signer and an owner.
-     * @param _bridgeSigner Address responsible for signing cross-chain transactions.
-     * @param _initialOwner Address of the contract owner.
+     * @dev Initializes the NFTBridge contract.
+     * @param _bridgeSigner The address of the bridge signer.
+     * @param _initialOwner The initial owner of the contract.
      */
-    constructor(address _bridgeSigner, address _initialOwner)
-        Ownable(_initialOwner) {
+    constructor(address _bridgeSigner, address _initialOwner) Ownable(_initialOwner) {
         bridgeSigner = _bridgeSigner;
     }
 
-
     /**
-     * @dev Mints an NFT if it does not already exist.
-     * Ensures that the collection is whitelisted and the signature is valid.
-     * @param collection Address of the NFT collection.
-     * @param to Recipient address of the newly minted NFT.
-     * @param tokenId Unique token ID for the NFT.
-     * @param tokenURI Metadata URI for the NFT.
-     * @param requestNonce Unique nonce to prevent replay attacks.
-     * @param signature Signed message verifying authenticity.
+     * @dev Handles the receipt of an ERC721 token.
+     * @return The selector confirming the receipt.
      */
-    function safeMint(address collection,address to,uint256 tokenId,string calldata tokenURI,uint256 requestNonce,bytes calldata signature) external {
-        require(whiteListedCollection[collection],"Not whiteListed collection");
-        bytes memory message = abi.encodePacked(collection,to,tokenId,tokenURI,requestNonce);
-        require(_verifySignature(message, signature), "Invalid signature");
-        require(!exists(collection, tokenId), "NFT already exists");
-        require(!lockedTokens[collection][tokenId], "NFT locked");
-
-        IERC721 nft = IERC721(collection);
-        // **Mint the NFT**
-        nft.safeMint(to, tokenId, tokenURI);
-        emit NFTMinted(collection, to, tokenId);
+    function onERC721Received(address, address, uint256, bytes calldata) public pure override returns (bytes4) {
+        return IERC721Receiver.onERC721Received.selector;
     }
 
     /**
-     * @dev Unlocks a previously locked NFT and transfers it to the recipient.
-     * Ensures the NFT exists, is locked, and the signature is valid.
-     * @param collection Address of the NFT collection.
-     * @param to Recipient address for the unlocked NFT.
-     * @param tokenId Unique token ID to unlock.
-     * @param requestNonce Unique nonce to prevent replay attacks.
-     * @param signature Signed message verifying authenticity.
+     * @dev Mints or unlocks a batch of NFTs based on a valid signature.
+     * @param collection The NFT collection address.
+     * @param toAddress The recipient address.
+     * @param tokenIds The token IDs to mint/unlock.
+     * @param tokenURIs The metadata URIs of the tokens.
+     * @param requestNonce The unique nonce for this request.
+     * @param signature The signature verifying the request.
      */
-    function unlockNFT(address collection,address to,uint256 tokenId,uint256 requestNonce,bytes calldata signature) external {
-        require(whiteListedCollection[collection],"Not whiteListed collection");
-        require(exists(collection, tokenId), "NFT does not exists");
-        require(lockedTokens[collection][tokenId], "NFT is not locked");
-        bytes memory message = abi.encode(collection,to,tokenId,requestNonce);
-        require(_verifySignature(message, signature), "Invalid signature");
-
-        IERC721 nft = IERC721(collection);
-        // **Unlock the NFT**
-        lockedTokens[collection][tokenId] = false;
-        nft.safeTransferFrom(address(this), to, tokenId);
-        emit NFTUnlocked(collection, to, tokenId);
-    }
-
-    /**
-     * @dev Locks an NFT in the contract to enable cross-chain bridging.
-     * Ensures the NFT exists, is not already locked, and the signature is valid.
-     * @param collection Address of the NFT collection.
-     * @param tokenId Unique token ID to lock.
-     * @param requestNonce Unique nonce to prevent replay attacks.
-     * @param signature Signed message verifying authenticity.
-     */
-    function lockNFT(address collection,uint256 tokenId,uint256 requestNonce,bytes calldata signature) external {
-        require(whiteListedCollection[collection],"Not whiteListed collection");
-        bytes memory message = abi.encode(collection,tokenId,requestNonce);
-        require(_verifySignature(message, signature), "Invalid signature");
-        require(exists(collection, tokenId), "NFT does not exists");
-        require(!lockedTokens[collection][tokenId], "NFT already locked");
-
-        IERC721 nft = IERC721(collection);
-        require(nft.ownerOf(tokenId) == msg.sender, "Not NFT owner");
-
-        lockedTokens[collection][tokenId] = true;
-        nft.transferFrom(msg.sender, address(this), tokenId);
-        emit NFTLocked(collection, tokenId);
-    }
-
-    /**
-     * @dev Mints or unlocks multiple NFTs in a batch process.
-     * @param collection Address of the NFT collection.
-     * @param toAddress Recipient address.
-     * @param tokenIds Array of NFT token IDs.
-     * @param tokenURIs Array of metadata URIs corresponding to token IDs.
-     * @param requestNonce Unique nonce to prevent replay attacks.
-     * @param signature Signed message verifying authenticity.
-     */
-    function batchMintOrUnlock(address collection,address toAddress, uint256[] memory tokenIds,string[] memory tokenURIs,
-        uint256 requestNonce,bytes memory signature) external {
-        require(tokenIds.length == tokenURIs.length,"Input array lengths mismatch");
-        require(whiteListedCollection[collection],"Not whiteListed collection");
-
-        // **Ensure nonce is not reused**
+    function batchMintOrUnlock(
+        address collection,
+        address toAddress,
+        uint256[] calldata tokenIds,
+        string[] calldata tokenURIs,
+        uint256 requestNonce,
+        bytes calldata signature
+    ) external {
+        require(tokenIds.length == tokenURIs.length, "Input array lengths mismatch");
+        require(whiteListedCollection[collection], "Not whitelisted collection");
         require(!usedNonces[requestNonce], "Nonce already used");
-        bytes memory message = abi.encode(collection,toAddress,tokenIds,tokenURIs,requestNonce);        
+        usedNonces[requestNonce] = true;
+
+        bytes memory message = abi.encode(collection, toAddress, tokenIds, tokenURIs, requestNonce);
         require(_verifySignature(message, signature), "Invalid signature");
-        usedNonces[requestNonce] = true; // Mark nonce as used
 
+        IERC721Bridge nft = IERC721Bridge(collection);
+        nft.batchMintOrUnlock(toAddress, tokenIds, tokenURIs);
 
-        for (uint256 i = 0; i < tokenIds.length; i++) {
-            uint256 tokenId = tokenIds[i];
-            string memory tokenURI = tokenURIs[i];
-            IERC721 nft = IERC721(collection);
-            
-            if (exists(collection, tokenId)) {
-                // **Unlock the NFT**
-                require(lockedTokens[collection][tokenId], "NFT is not locked");
-                require(nft.ownerOf(tokenId) == address(this), "NFT ownership mismatch");                
-                
-                lockedTokens[collection][tokenId] = false;
-                nft.transferFrom(address(this), toAddress, tokenId);
-                emit NFTUnlocked(collection, toAddress, tokenId);
-            } else {
-                // **Mint the NFT**
-                // require(!exists(collection, tokenId), "NFT already exists");
-                nft.safeMint(toAddress, tokenId, tokenURI);
-                emit NFTMinted(collection, toAddress, tokenId);
-            }
-        }
+        emit NFTBatchMintedOrUnlocked(collection, toAddress, tokenIds);
     }
 
     /**
-     * @dev Locks multiple NFTs in the contract for cross-chain bridging.
-     * Ensures the NFT collection is whitelisted, tokens exist, are not already locked,
-     * and the caller is the rightful owner. Uses a signature for validation.
-     *
-     * @param collection Address of the NFT collection.
-     * @param tokenIds Array of NFT token IDs to be locked.
-     * @param requestNonce Unique nonce to prevent replay attacks.
-     * @param signature Signed message verifying authenticity.
+     * @dev Locks a batch of NFTs to bridge them to another network.
+     * @param collection The NFT collection address.
+     * @param tokenIds The token IDs to lock.
+     * @param requestNonce The unique nonce for this request.
+     * @param signature The signature verifying the request.
      */
-    function batchLockNFT(address collection, uint256[] calldata tokenIds, uint256 requestNonce, bytes calldata signature) external {
-        require(whiteListedCollection[collection], "Not whiteListed collection");
-        bytes memory message = abi.encode(collection, tokenIds, requestNonce);
+    function batchLockNFT(address collection,uint256[] calldata tokenIds,uint256 requestNonce,bytes calldata signature) external {
+        require(whiteListedCollection[collection], "Not whitelisted collection");
+        require(!usedNonces[requestNonce], "Nonce already used");
+        usedNonces[requestNonce] = true;
+
+        bytes memory message = abi.encode(collection, tokenIds, requestNonce, _msgSender());
         require(_verifySignature(message, signature), "Invalid signature");
 
-        IERC721 nft = IERC721(collection);
+        IERC721Bridge nft = IERC721Bridge(collection);
 
-        for (uint256 i = 0; i < tokenIds.length; i++) {
-            uint256 tokenId = tokenIds[i];
-            require(exists(collection, tokenId), "NFT does not exist");
-            require(!lockedTokens[collection][tokenId], "NFT already locked");
-            require(nft.ownerOf(tokenId) == msg.sender, "Not NFT owner");
+        nft.batchSafeTransfer(_msgSender(), address(this), tokenIds);
 
-            lockedTokens[collection][tokenId] = true;
-            nft.transferFrom(msg.sender, address(this), tokenId);
-            emit NFTLocked(collection, tokenId);
-        }
+        emit NFTBatchLocked(collection, _msgSender(), tokenIds);
     }
 
+    /**
+     * @dev Updates the bridge signer address. Only callable by the owner.
+     * @param newSigner The new bridge signer address.
+     */
     function setBridgeSigner(address newSigner) external onlyOwner {
         bridgeSigner = newSigner;
     }
 
-    function _supportsInterface(IERC721 nft, bytes4 interfaceId) internal view returns (bool) {
+    /**
+     * @dev Checks if an NFT contract supports a given interface.
+     * @param nft The NFT contract address.
+     * @param interfaceId The interface ID to check.
+     * @return True if supported, otherwise false.
+     */
+    function _supportsInterface(IERC721Bridge nft, bytes4 interfaceId) internal view returns (bool) {
         (bool success, bytes memory result) = address(nft).staticcall(
             abi.encodeWithSelector(nft.supportsInterface.selector, interfaceId)
         );
@@ -184,50 +122,55 @@ contract NFTBridge is Ownable, VerifyByteSignature {
     }
 
     /**
-     * @dev Adds a collection to the whitelist.
-     * Can only be called by the contract owner.
+     * @dev Whitelists multiple NFT collections. Only callable by the owner.
+     * @param collections The addresses of NFT collections to whitelist.
      */
-    function addCollection(address collection) external onlyOwner {
-        require(collection != address(0), "Invalid collection address");
-        require(!whiteListedCollection[collection], "Collection already whitelisted");
-
-        whiteListedCollection[collection] = true;
+    function addCollections(address[] calldata collections) external onlyOwner {
+        for (uint256 i = 0; i < collections.length; i++) {
+            require(collections[i] != address(0), "Invalid collection address");
+            require(!whiteListedCollection[collections[i]], "Already whitelisted");
+            whiteListedCollection[collections[i]] = true;
+        }
     }
 
     /**
-     * @dev Removes a collection from the whitelist.
-     * Can only be called by the contract owner.
+     * @dev Removes multiple NFT collections from the whitelist. Only callable by the owner.
+     * @param collections The addresses of NFT collections to remove.
      */
-    function removeCollection(address collection) external onlyOwner {
-        require(whiteListedCollection[collection], "Collection not in whitelist");
-
-        whiteListedCollection[collection] = false;
+    function removeCollections(address[] calldata collections) external onlyOwner {
+        for (uint256 i = 0; i < collections.length; i++) {
+            require(collections[i] != address(0), "Invalid collection address");
+            require(whiteListedCollection[collections[i]], "Collection not in whitelist");
+            whiteListedCollection[collections[i]] = false;
+        }
     }
 
     /**
-     * @dev Checks if a collection is whitelisted.
+     * @dev Checks if an NFT collection is whitelisted.
+     * @param collection The address of the collection.
+     * @return True if whitelisted, otherwise false.
      */
     function isCollectionWhitelisted(address collection) external view returns (bool) {
         return whiteListedCollection[collection];
     }
 
     /**
-     * @dev Checks whether a given NFT exists in the specified collection.
-     * @param collection Address of the NFT collection.
-     * @param tokenId Unique token ID.
-     * @return Boolean indicating if the NFT exists.
+     * @dev Checks if a token exists in a given collection.
+     * @param collection The NFT collection address.
+     * @param tokenId The token ID to check.
+     * @return True if the token exists, otherwise false.
      */
-    function exists(address collection, uint256 tokenId) public view returns (bool){
-        return IERC721(collection).isTokenExists(tokenId);
+    function exists(address collection, uint256 tokenId) public view returns (bool) {
+        return IERC721Bridge(collection).isTokenExists(tokenId);
     }
 
     /**
-     * @dev Verifies a signed message using the bridge signer.
-     * @param message Encoded message data.
-     * @param signature Signed message.
-     * @return Boolean indicating whether the signature is valid.
+     * @dev Verifies a signature using the bridge signer.
+     * @param message The encoded message.
+     * @param signature The signature to verify.
+     * @return True if valid, otherwise false.
      */
-    function _verifySignature(bytes memory message, bytes memory signature) internal view returns (bool){
+    function _verifySignature(bytes memory message, bytes memory signature) internal view returns (bool) {
         return VerifyByteSignature.verifySigner(bridgeSigner, message, signature);
     }
 }
