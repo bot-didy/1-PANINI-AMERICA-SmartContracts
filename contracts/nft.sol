@@ -261,11 +261,21 @@ contract PhoenixNFTs is Initializable, ERC721Upgradeable,
     }
 
     function isNonceUsed(uint256 _requestNonce)
-        internal
+        public
         view
         returns (bool)
     {
         return usedNonces[_requestNonce];
+    }
+
+    /**
+     * @dev Sets `_tokenURI` as the tokenURI of `tokenId`.
+     * Emits {MetadataUpdate}.
+     * this function will be used in extreme sceanarios
+     */
+    function updateTokenURI(uint256 tokenId, string memory _tokenURI)  public virtual onlyRole(PANINI_NFT_OPERATOR) {
+        _setTokenURI(tokenId, _tokenURI);
+        emit MetadataUpdate(tokenId);
     }
 
 

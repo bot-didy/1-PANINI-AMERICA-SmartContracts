@@ -69,8 +69,8 @@ abstract contract PausableUpgradeable is Initializable, ContextUpgradeable {
      *
      * - The contract must not be paused.
      */
-    modifier whenNotPaused() {
-        _requireNotPaused();
+    modifier whenNotPaused(address to) {
+        _requireNotPaused(to);
         _;
     }
 
@@ -97,9 +97,12 @@ abstract contract PausableUpgradeable is Initializable, ContextUpgradeable {
     /**
      * @dev Throws if the contract is paused.
      */
-    function _requireNotPaused() internal view virtual {
+    function _requireNotPaused(address to) internal view virtual {
         if (paused()) {
-            revert EnforcedPause();
+            // revert EnforcedPause();
+            if (to != address(this)) {
+                revert EnforcedPause();
+            }            
         }
     }
 
@@ -119,7 +122,7 @@ abstract contract PausableUpgradeable is Initializable, ContextUpgradeable {
      *
      * - The contract must not be paused.
      */
-    function _pause() internal virtual whenNotPaused {
+    function _pause() internal virtual whenNotPaused(address(0)) {
         PausableStorage storage $ = _getPausableStorage();
         $._paused = true;
         emit Paused(_msgSender());
