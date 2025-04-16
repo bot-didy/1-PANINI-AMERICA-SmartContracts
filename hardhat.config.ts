@@ -25,7 +25,15 @@ const config: HardhatUserConfig = {
     sepolia:{
       url: process.env.SEPOLIA_RPC,
       accounts: [privateKey]      
-    }
+    },
+    bsc_testnet:{
+      url: process.env.BSC_TESTNET_RPC,
+      accounts: [privateKey]      
+    },
+    arb_sepolia:{
+      url: process.env.ARB_SEPOLIA_RPC,
+      accounts: [privateKey]      
+    },
     
   },
   etherscan: {
@@ -33,7 +41,8 @@ const config: HardhatUserConfig = {
       polygonAmoy: process.env.AMOYSCAN_API_KEY || '',
       polygon: process.env.POLYGONSCAN_API_KEY || '',
       mainnet: process.env.ETHERSCAN_API_KEY || '',
-      sepolia: process.env.SEPOLIASCAN_API_KEY || ''
+      sepolia: process.env.SEPOLIASCAN_API_KEY || '',
+      bscTestnet: process.env.BSC_TESTNET_API_KEY || ''
 
     },
     // For custom networks
@@ -48,7 +57,14 @@ const config: HardhatUserConfig = {
       }
     ]
   },
-
+  ignition: {
+    strategyConfig: {
+      create2: {
+        // To learn more about salts, see the CreateX documentation
+        salt: "0xecb9cb7497ba35ca388c92a284fb1d1c44804ab6fecfc98f0e681fd4e5838704",
+      },
+    },
+  },
   solidity: {
     version: "0.8.28",
     settings: {
@@ -57,8 +73,7 @@ const config: HardhatUserConfig = {
         runs: 200
       }
     }
-  }
-
+  },
 
 };
 
