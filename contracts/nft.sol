@@ -25,6 +25,7 @@ contract PhoenixNFTs is Initializable, ERC721Upgradeable,
 
     /// @notice Mapping to track used nonces to prevent replay attacks
     mapping(uint256 => bool) public usedNonces;
+    mapping(uint256 => bool) public burnedTokenIds;
 
     /// @notice Event emitted when NFTs are minted or unlocked
     event NFTBatchMintedOrUnlocked(
@@ -151,7 +152,9 @@ contract PhoenixNFTs is Initializable, ERC721Upgradeable,
 
     function burn(uint256 tokenId) public virtual override  {
         require(_ownerOf(tokenId)==_msgSender(), "Only token owner can burn");
-        _burn(tokenId);
+        super._burn(tokenId);
+        burnedTokenIds[tokenId] = true;
+        _resetTokenRoyalty(tokenId);
     }
 
 
@@ -187,10 +190,13 @@ contract PhoenixNFTs is Initializable, ERC721Upgradeable,
         require(_verifySignature(message, signature), "Invalid signature");
 
         for (uint256 i = 0; i < tokenIds.length; i++) {
+            require(!burnedTokenIds[tokenIds[i]], "Token ID was burned and cannot be reused");
+            
             if (!_exists(tokenIds[i])) {
                 _safeMint(_msgSender(), tokenIds[i]);
                 _setTokenURI(tokenIds[i], tokenURIs[i]);
             } else {
+                require(_ownerOf(tokenIds[i]) == address(this), "Contract does not own token");
                 _safeTransfer(address(this),_msgSender(),tokenIds[i]);
 
             }
