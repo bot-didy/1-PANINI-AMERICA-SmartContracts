@@ -11,7 +11,7 @@ describe("PhoenixNFTs", function () {
   let owner:any, operator:any, user1:any, user2:any ;
   let nftContract:any;
   const feeNumerator = 500; // 5%
-  const name = "PhoenixNfts";
+  const name = "SuperSonicNfts";
   const symbol = "MTK2";
 
   beforeEach(async () => {
@@ -59,13 +59,29 @@ describe("PhoenixNFTs", function () {
   });
 
   describe("Burn", () => {
-    it("should allow owner to burn", async () => {
+
+    it("should through error as burn permissions not given", async () => {
       await nftContract.connect(operator).safeMint(user1.address, 5, "ipfs://burn");
+      await expect(nftContract.connect(user1).burn(5)).to.be.reverted;
+    });
+    
+    it("should allow owner to burn", async () => {
+      const PANINI_NFT_OPERATOR = ethers.keccak256(
+        ethers.toUtf8Bytes("PANINI_NFT_OPERATOR")
+      );
+      await nftContract.grantRole(PANINI_NFT_OPERATOR, operator.address);
+      await nftContract.connect(operator).safeMint(user1.address, 5, "ipfs://burn");
+      await nftContract.connect(operator).updateBurn(true);
       await nftContract.connect(user1).burn(5);
       await expect(nftContract.ownerOf(5)).to.be.reverted;
     });
 
     it("should not allow non-owner to burn", async () => {
+      const PANINI_NFT_OPERATOR = ethers.keccak256(
+        ethers.toUtf8Bytes("PANINI_NFT_OPERATOR")
+      );
+      await nftContract.grantRole(PANINI_NFT_OPERATOR, operator.address);
+      await nftContract.connect(operator).updateBurn(true);
       await nftContract.connect(operator).safeMint(user1.address, 6, "ipfs://failburn");
       await expect(nftContract.connect(user2).burn(6)).to.be.revertedWith("Only token owner can burn");
     });
@@ -337,6 +353,20 @@ describe("PhoenixNFTs", function () {
     
       expect(await nftContract.owner()).to.equal(user1.address);
     });
+  })
+  describe('transferToContract', () => { 
+    it("should transfer nft from source to destination", async () => {
+      const PANINI_NFT_OPERATOR = await nftContract.PANINI_NFT_OPERATOR();
+      const WHITELISTED_MARKETPLACE = await nftContract.WHITELISTED_MARKETPLACE();
+      await nftContract.grantRole(PANINI_NFT_OPERATOR, owner.address);
+      const tokenId = 1;
+      // Mint to addr1
+      await nftContract.safeMint(user1.address, tokenId, "ipfs://somehash");
+
+      // addr2 does transferFrom
+      await expect(nftContract.connect(user1).transferFrom(user1.address, nftContract.target, tokenId)).to.be.revertedWithCustomError(nftContract, "ERC721InvalidReceiver").withArgs(nftContract.target);
+      
+    })
   })
 
 });
