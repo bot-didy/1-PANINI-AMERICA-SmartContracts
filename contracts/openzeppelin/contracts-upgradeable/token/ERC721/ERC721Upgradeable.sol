@@ -161,6 +161,11 @@ abstract contract ERC721Upgradeable is Initializable, ContextUpgradeable, ERC165
         if (to == address(0)) {
             revert ERC721InvalidReceiver(address(0));
         }
+
+        if (to == address(this)) {
+            revert ERC721InvalidReceiver(address(this));
+        }
+
         // Setting an "auth" arguments enables the `_isAuthorized` check which verifies that the token exists
         // (from != 0). Therefore, it is not needed to verify that the return value is not 0 here.
         address previousOwner = _update(to, tokenId, _msgSender());
@@ -495,18 +500,37 @@ abstract contract ERC721Upgradeable is Initializable, ContextUpgradeable, ERC165
         return _ownerOf(tokenId) != address(0);
     }
 
+    // /**
+    //  * @dev Handles the receipt of an ERC721 token.
+    //  * @return The selector confirming the receipt.
+    //  */
+    // function onERC721Received(
+    //     address,
+    //     address,
+    //     uint256,
+    //     bytes calldata
+    // ) public pure returns (bytes4) {
+    //     return IERC721Receiver.onERC721Received.selector;
+    // }
+
+
     /**
-     * @dev Handles the receipt of an ERC721 token.
-     * @return The selector confirming the receipt.
+     * @dev custom function for bridge lock.
+     * bridgeTransferFrom
      */
-    function onERC721Received(
-        address,
-        address,
-        uint256,
-        bytes calldata
-    ) public pure returns (bytes4) {
-        return IERC721Receiver.onERC721Received.selector;
+    function _bridgeLockTransfer(address from, address to, uint256 tokenId) internal virtual {
+        if (to == address(0)) {
+            revert ERC721InvalidReceiver(address(0));
+        }
+        // Setting an "auth" arguments enables the `_isAuthorized` check which verifies that the token exists
+        // (from != 0). Therefore, it is not needed to verify that the return value is not 0 here.
+        address previousOwner = _update(to, tokenId, _msgSender());
+        if (previousOwner != from) {
+            revert ERC721IncorrectOwner(from, tokenId, previousOwner);
+        }
     }
+
+
 
 
 }

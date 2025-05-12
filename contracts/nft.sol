@@ -14,7 +14,6 @@ import {PaniniValidator} from "./panini-smartlocks/PaniniValidator.sol";
 import {CreatorTokenValidator} from "./limitbreak/CreatorTokenValidator.sol";
 import {VerifyByteSignature} from "./openzeppelin/contracts/utils/VerifyByteSignature.sol";
 
-
 contract PhoenixNFTs is Initializable, ERC721Upgradeable,
     ERC721EnumerableUpgradeable, ERC721URIStorageUpgradeable,
     ERC721PausableUpgradeable, OwnableUpgradeable, 
@@ -26,7 +25,7 @@ contract PhoenixNFTs is Initializable, ERC721Upgradeable,
     /// @notice Mapping to track used nonces to prevent replay attacks
     mapping(uint256 => bool) public usedNonces;
     mapping(uint256 => bool) public burnedTokenIds;
-
+    bool public isBurnEnabled;
     /// @notice Event emitted when NFTs are minted or unlocked
     event NFTBatchMintedOrUnlocked(
         uint256 indexed requestNonce,
@@ -42,7 +41,8 @@ contract PhoenixNFTs is Initializable, ERC721Upgradeable,
     );
 
     function initialize(address initialOwner,address receiver, uint96 feeNumerator) public initializer {
-        __ERC721_init("PhoenixNfts", "PhoenixNfts");
+        __ERC721_init("SuperSonicNfts", "SuperSonicNfts");
+        // __ERC721_init("PhoenixNfts", "PhoenixNfts");
         __ERC721Enumerable_init();
         __ERC721URIStorage_init();
         __ERC721Pausable_init();
@@ -69,6 +69,7 @@ contract PhoenixNFTs is Initializable, ERC721Upgradeable,
         public
         onlyRole(PANINI_NFT_OPERATOR)
     {
+        require(!burnedTokenIds[tokenId], "Token ID was burned and cannot be reused");
         _safeMint(to, tokenId);
         _setTokenURI(tokenId, uri);
     }
@@ -97,6 +98,11 @@ contract PhoenixNFTs is Initializable, ERC721Upgradeable,
         super._increaseBalance(account, value);
     }
 
+    /**
+     * @notice Returns the URI for a given token ID.
+     * @param tokenId The ID of the token.
+     * @return The URI string for the specified token.
+     */
     function tokenURI(uint256 tokenId)
         public
         view
@@ -127,16 +133,23 @@ contract PhoenixNFTs is Initializable, ERC721Upgradeable,
         require(tokenIds.length == uris.length, "Token IDs and URIs length mismatch");
         for (uint256 i = 0; i < tokenIds.length; i++) {
             require(!_exists(tokenIds[i]), "Token ID already exists");
+            require(!burnedTokenIds[tokenIds[i]], "Token ID was burned and cannot be reused");
             _mint(to, tokenIds[i]);
             _setTokenURI(tokenIds[i], uris[i]);
         }
     }
 
+    /**
+     * @notice Validates the operator before setting approval.
+     */
     function setApprovalForAll(address operator, bool approved) public override(ERC721Upgradeable,IERC721) {
         _validateApproval(operator);
         super.setApprovalForAll(operator, approved);
     }
 
+    /**
+     * @notice Validates the operator before setting approval.
+     */
     function approve(address operator, uint256 tokenId) public override(ERC721Upgradeable,IERC721) {
         _validateApproval(operator);
         super.approve(operator, tokenId);
@@ -150,7 +163,19 @@ contract PhoenixNFTs is Initializable, ERC721Upgradeable,
         return super.isApprovedForAll(owner, operator);
     }
 
+    /**
+     * @notice Burns the specified NFT token, permanently removing it from circulation.
+     * @dev 
+     * - Burning is only allowed if `enableBurn` is set to true.
+     * - Only the current owner of the token can call this function.
+     * - Clears the royalty information for the burned token.
+     * 
+     * Emits a {Burned} event.
+     *
+     * @param tokenId The ID of the token to be burned.
+     */
     function burn(uint256 tokenId) public virtual override  {
+        require(isBurnEnabled==true, "Burning NFT is not enabled");
         require(_ownerOf(tokenId)==_msgSender(), "Only token owner can burn");
         super._burn(tokenId);
         burnedTokenIds[tokenId] = true;
@@ -233,8 +258,8 @@ contract PhoenixNFTs is Initializable, ERC721Upgradeable,
         require(_verifySignature(message, signature), "Invalid signature");
 
         for (uint256 i = 0; i < tokenIds.length; i++) {
-            safeTransferFrom(_msgSender(), address(this), tokenIds[i]);
-        }        
+            _bridgeLockTransfer(_msgSender(), address(this), tokenIds[i]);
+        }
         emit NFTBatchLocked(requestNonce, _msgSender(), tokenIds);
     }
 
@@ -263,7 +288,7 @@ contract PhoenixNFTs is Initializable, ERC721Upgradeable,
      * Emits {MetadataUpdate}.
      * this function will be used in extreme sceanarios
      */
-    function updateTokenURI(uint256 tokenId, string memory _tokenURI)  public virtual onlyRole(DEFAULT_ADMIN_ROLE) {
+    function updateTokenURI(uint256 tokenId, string memory _tokenURI)  public virtual onlyRole(PANINI_NFT_OPERATOR) {
         _setTokenURI(tokenId, _tokenURI);
         emit MetadataUpdate(tokenId);
     }

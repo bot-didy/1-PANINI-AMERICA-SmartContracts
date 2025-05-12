@@ -3,11 +3,11 @@ pragma solidity ^0.8.0;
 
 contract VerifyByteSignature {
 
-    function getMessageHash(bytes memory _message) public pure returns (bytes32) {
+    function _getMessageHash(bytes memory _message) internal pure returns (bytes32) {
         return keccak256(_message);
     }
 
-    function getEthSignedMessageHash(bytes32 _messageHash) public pure returns (bytes32) {
+    function _getEthSignedMessageHash(bytes32 _messageHash) internal pure returns (bytes32) {
         return keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", _messageHash));
     }
 
@@ -25,9 +25,8 @@ contract VerifyByteSignature {
         pure
         returns (address)
     {
-        bytes32 messageHash = getMessageHash(_message);
-        bytes32 ethSignedMessageHash = getEthSignedMessageHash(messageHash);
-
+        bytes32 messageHash = _getMessageHash(_message);
+        bytes32 ethSignedMessageHash = _getEthSignedMessageHash(messageHash);
 
         (bytes32 r, bytes32 s, uint8 v) = splitSignature(_signature);
         return ecrecover(ethSignedMessageHash, v, r, s);
