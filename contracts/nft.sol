@@ -292,4 +292,10 @@ contract PhoenixNFTs is Initializable, ERC721Upgradeable,
         _setTokenURI(tokenId, _tokenURI);
         emit MetadataUpdate(tokenId);
     }
+
+    /// @notice enable or disable isBurnEnabled
+    function updateBurn(bool _status) public onlyRole(PANINI_NFT_OPERATOR) {
+        isBurnEnabled=_status;
+    }
+
 }
