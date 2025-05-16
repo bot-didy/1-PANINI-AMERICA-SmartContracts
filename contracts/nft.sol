@@ -26,6 +26,12 @@ contract PhoenixNFTs is Initializable, ERC721Upgradeable,
     mapping(uint256 => bool) public usedNonces;
     mapping(uint256 => bool) public burnedTokenIds;
     bool public isBurnEnabled;
+
+    //just for view method, stores nothing
+    struct TokenOwner {
+        uint256 tokenId;
+        address owner;
+    }
     /// @notice Event emitted when NFTs are minted or unlocked
     event NFTBatchMintedOrUnlocked(
         uint256 indexed requestNonce,
@@ -297,5 +303,17 @@ contract PhoenixNFTs is Initializable, ERC721Upgradeable,
     function updateBurn(bool _status) public onlyRole(PANINI_NFT_OPERATOR) {
         isBurnEnabled=_status;
     }
+
+    // @notice Returns the owners of multiple token IDs.
+    // @param tokenIds An array of token IDs to query.
+    // @return result An array of TokenOwner structs containing token IDs and their owners.
+    function ownersOf(uint256[] calldata tokenIds) external view returns (TokenOwner[] memory) {
+        TokenOwner[] memory result = new TokenOwner[](tokenIds.length);
+        for (uint256 i = 0; i < tokenIds.length; i++) {
+            result[i] = TokenOwner(tokenIds[i], ownerOf(tokenIds[i]));
+        }
+        return result;
+    }
+
 
 }
