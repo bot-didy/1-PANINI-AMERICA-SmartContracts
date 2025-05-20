@@ -38,8 +38,7 @@ abstract contract ERC2981Upgradeable is
     }
 
     // keccak256(abi.encode(uint256(keccak256("openzeppelin.storage.ERC2981")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 private constant ERC2981StorageLocation =
-        0xdaedc9ab023613a7caf35e703657e986ccfad7e3eb0af93a2853f8d65dd86b00;
+    bytes32 private constant ERC2981StorageLocation = 0xdaedc9ab023613a7caf35e703657e986ccfad7e3eb0af93a2853f8d65dd86b00;
 
     event DefaultRoyaltySet(address indexed receiver, uint96 feeNumerator);
     event TokenRoyaltySet(
