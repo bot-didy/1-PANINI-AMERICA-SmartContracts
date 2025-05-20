@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // OpenZeppelin Contracts (last updated v5.0.0) (proxy/utils/Initializable.sol)
 
-pragma solidity ^0.8.20;
+pragma solidity 0.8.28;
 
 /**
  * @dev This is a base contract to aid in writing upgradeable contracts, or any kind of contract that will be deployed
@@ -74,7 +74,8 @@ abstract contract Initializable {
     }
 
     // keccak256(abi.encode(uint256(keccak256("openzeppelin.storage.Initializable")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 private constant INITIALIZABLE_STORAGE = 0xf0c57e16840df040f15088dc2f81fe391c3923bec73e23a9662efc9c229c6a00;
+    bytes32 private constant INITIALIZABLE_STORAGE =
+        0xf0c57e16840df040f15088dc2f81fe391c3923bec73e23a9662efc9c229c6a00;
 
     /**
      * @dev The contract is already initialized.
@@ -220,7 +221,11 @@ abstract contract Initializable {
      * @dev Returns a pointer to the storage namespace.
      */
     // solhint-disable-next-line var-name-mixedcase
-    function _getInitializableStorage() private pure returns (InitializableStorage storage $) {
+    function _getInitializableStorage()
+        private
+        pure
+        returns (InitializableStorage storage $)
+    {
         assembly {
             $.slot := INITIALIZABLE_STORAGE
         }

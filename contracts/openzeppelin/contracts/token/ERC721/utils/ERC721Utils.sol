@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // OpenZeppelin Contracts (last updated v5.1.0) (token/ERC721/utils/ERC721Utils.sol)
 
-pragma solidity ^0.8.20;
+pragma solidity 0.8.28;
 
 import {IERC721Receiver} from "../IERC721Receiver.sol";
 import {IERC721Errors} from "../../../interfaces/draft-IERC6093.sol";
@@ -30,7 +30,14 @@ library ERC721Utils {
         bytes memory data
     ) internal {
         if (to.code.length > 0) {
-            try IERC721Receiver(to).onERC721Received(operator, from, tokenId, data) returns (bytes4 retval) {
+            try
+                IERC721Receiver(to).onERC721Received(
+                    operator,
+                    from,
+                    tokenId,
+                    data
+                )
+            returns (bytes4 retval) {
                 if (retval != IERC721Receiver.onERC721Received.selector) {
                     // Token rejected
                     revert IERC721Errors.ERC721InvalidReceiver(to);

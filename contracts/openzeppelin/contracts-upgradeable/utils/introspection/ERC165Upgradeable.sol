@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // OpenZeppelin Contracts (last updated v5.1.0) (utils/introspection/ERC165.sol)
 
-pragma solidity ^0.8.20;
+pragma solidity 0.8.28;
 
 import {IERC165} from "../../../contracts/utils/introspection/IERC165.sol";
 import {Initializable} from "../../proxy/utils/Initializable.sol";
@@ -19,15 +19,15 @@ import {Initializable} from "../../proxy/utils/Initializable.sol";
  * ```
  */
 abstract contract ERC165Upgradeable is Initializable, IERC165 {
-    function __ERC165_init() internal onlyInitializing {
-    }
+    function __ERC165_init() internal onlyInitializing {}
 
-    function __ERC165_init_unchained() internal onlyInitializing {
-    }
+    function __ERC165_init_unchained() internal onlyInitializing {}
     /**
      * @dev See {IERC165-supportsInterface}.
      */
-    function supportsInterface(bytes4 interfaceId) public view virtual returns (bool) {
+    function supportsInterface(
+        bytes4 interfaceId
+    ) public view virtual returns (bool) {
         return interfaceId == type(IERC165).interfaceId;
     }
 }

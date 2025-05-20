@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // OpenZeppelin Contracts (last updated v5.1.0) (token/common/ERC2981.sol)
 
-pragma solidity ^0.8.20;
+pragma solidity 0.8.28;
 
 import {IERC2981} from "../../../contracts/interfaces/IERC2981.sol";
 import {IERC165} from "../../../contracts/utils/introspection/IERC165.sol";
@@ -21,7 +21,11 @@ import {Initializable} from "../../proxy/utils/Initializable.sol";
  * https://eips.ethereum.org/EIPS/eip-2981#optional-royalty-payments[Rationale] in the ERC. Marketplaces are expected to
  * voluntarily pay royalties together with sales, but note that this standard is not yet widely supported.
  */
-abstract contract ERC2981Upgradeable is Initializable, IERC2981, ERC165Upgradeable {
+abstract contract ERC2981Upgradeable is
+    Initializable,
+    IERC2981,
+    ERC165Upgradeable
+{
     struct RoyaltyInfo {
         address receiver;
         uint96 royaltyFraction;
@@ -34,12 +38,21 @@ abstract contract ERC2981Upgradeable is Initializable, IERC2981, ERC165Upgradeab
     }
 
     // keccak256(abi.encode(uint256(keccak256("openzeppelin.storage.ERC2981")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 private constant ERC2981StorageLocation = 0xdaedc9ab023613a7caf35e703657e986ccfad7e3eb0af93a2853f8d65dd86b00;
+    bytes32 private constant ERC2981StorageLocation =
+        0xdaedc9ab023613a7caf35e703657e986ccfad7e3eb0af93a2853f8d65dd86b00;
 
     event DefaultRoyaltySet(address indexed receiver, uint96 feeNumerator);
-    event TokenRoyaltySet(uint256 indexed tokenId, address indexed receiver, uint96 feeNumerator);
+    event TokenRoyaltySet(
+        uint256 indexed tokenId,
+        address indexed receiver,
+        uint96 feeNumerator
+    );
 
-    function _getERC2981Storage() private pure returns (ERC2981Storage storage $) {
+    function _getERC2981Storage()
+        private
+        pure
+        returns (ERC2981Storage storage $)
+    {
         assembly {
             $.slot := ERC2981StorageLocation
         }
@@ -58,25 +71,39 @@ abstract contract ERC2981Upgradeable is Initializable, IERC2981, ERC165Upgradeab
     /**
      * @dev The royalty set for an specific `tokenId` is invalid (eg. (numerator / denominator) >= 1).
      */
-    error ERC2981InvalidTokenRoyalty(uint256 tokenId, uint256 numerator, uint256 denominator);
+    error ERC2981InvalidTokenRoyalty(
+        uint256 tokenId,
+        uint256 numerator,
+        uint256 denominator
+    );
 
     /**
      * @dev The royalty receiver for `tokenId` is invalid.
      */
     error ERC2981InvalidTokenRoyaltyReceiver(uint256 tokenId, address receiver);
 
-    function __ERC2981_init(address receiver, uint96 feeNumerator) internal onlyInitializing {
-        __ERC2981_init_unchained(receiver,feeNumerator);
+    function __ERC2981_init(
+        address receiver,
+        uint96 feeNumerator
+    ) internal onlyInitializing {
+        __ERC2981_init_unchained(receiver, feeNumerator);
     }
 
-    function __ERC2981_init_unchained(address receiver, uint96 feeNumerator) internal onlyInitializing {
-        _setDefaultRoyalty(receiver,feeNumerator);
+    function __ERC2981_init_unchained(
+        address receiver,
+        uint96 feeNumerator
+    ) internal onlyInitializing {
+        _setDefaultRoyalty(receiver, feeNumerator);
     }
     /**
      * @dev See {IERC165-supportsInterface}.
      */
-    function supportsInterface(bytes4 interfaceId) public view virtual override(IERC165, ERC165Upgradeable) returns (bool) {
-        return interfaceId == type(IERC2981).interfaceId || super.supportsInterface(interfaceId);
+    function supportsInterface(
+        bytes4 interfaceId
+    ) public view virtual override(IERC165, ERC165Upgradeable) returns (bool) {
+        return
+            interfaceId == type(IERC2981).interfaceId ||
+            super.supportsInterface(interfaceId);
     }
 
     /**
@@ -96,7 +123,8 @@ abstract contract ERC2981Upgradeable is Initializable, IERC2981, ERC165Upgradeab
             royaltyFraction = $._defaultRoyaltyInfo.royaltyFraction;
         }
 
-        uint256 royaltyAmount = (salePrice * royaltyFraction) / _feeDenominator();
+        uint256 royaltyAmount = (salePrice * royaltyFraction) /
+            _feeDenominator();
 
         return (royaltyReceiver, royaltyAmount);
     }
@@ -118,7 +146,10 @@ abstract contract ERC2981Upgradeable is Initializable, IERC2981, ERC165Upgradeab
      * - `receiver` cannot be the zero address.
      * - `feeNumerator` cannot be greater than the fee denominator.
      */
-    function _setDefaultRoyalty(address receiver, uint96 feeNumerator) internal virtual {
+    function _setDefaultRoyalty(
+        address receiver,
+        uint96 feeNumerator
+    ) internal virtual {
         ERC2981Storage storage $ = _getERC2981Storage();
         uint256 denominator = _feeDenominator();
         if (feeNumerator > denominator) {
@@ -131,7 +162,7 @@ abstract contract ERC2981Upgradeable is Initializable, IERC2981, ERC165Upgradeab
 
         $._defaultRoyaltyInfo = RoyaltyInfo(receiver, feeNumerator);
 
-        emit DefaultRoyaltySet(receiver, feeNumerator);        
+        emit DefaultRoyaltySet(receiver, feeNumerator);
     }
 
     /**
@@ -150,12 +181,20 @@ abstract contract ERC2981Upgradeable is Initializable, IERC2981, ERC165Upgradeab
      * - `receiver` cannot be the zero address.
      * - `feeNumerator` cannot be greater than the fee denominator.
      */
-    function _setTokenRoyalty(uint256 tokenId, address receiver, uint96 feeNumerator) internal virtual {
+    function _setTokenRoyalty(
+        uint256 tokenId,
+        address receiver,
+        uint96 feeNumerator
+    ) internal virtual {
         ERC2981Storage storage $ = _getERC2981Storage();
         uint256 denominator = _feeDenominator();
         if (feeNumerator > denominator) {
             // Royalty fee will exceed the sale price
-            revert ERC2981InvalidTokenRoyalty(tokenId, feeNumerator, denominator);
+            revert ERC2981InvalidTokenRoyalty(
+                tokenId,
+                feeNumerator,
+                denominator
+            );
         }
         if (receiver == address(0)) {
             revert ERC2981InvalidTokenRoyaltyReceiver(tokenId, address(0));

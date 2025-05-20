@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // OpenZeppelin Contracts (last updated v5.1.0) (token/ERC721/extensions/ERC721Enumerable.sol)
 
-pragma solidity ^0.8.20;
+pragma solidity 0.8.28;
 
 import {ERC721Upgradeable} from "../ERC721Upgradeable.sol";
 import {IERC721Enumerable} from "../../../../contracts/token/ERC721/extensions/IERC721Enumerable.sol";
@@ -15,20 +15,28 @@ import {Initializable} from "../../../proxy/utils/Initializable.sol";
  * CAUTION: {ERC721} extensions that implement custom `balanceOf` logic, such as {ERC721Consecutive},
  * interfere with enumerability and should not be used together with {ERC721Enumerable}.
  */
-abstract contract ERC721EnumerableUpgradeable is Initializable, ERC721Upgradeable, IERC721Enumerable {
+abstract contract ERC721EnumerableUpgradeable is
+    Initializable,
+    ERC721Upgradeable,
+    IERC721Enumerable
+{
     /// @custom:storage-location erc7201:openzeppelin.storage.ERC721Enumerable
     struct ERC721EnumerableStorage {
         mapping(address owner => mapping(uint256 index => uint256)) _ownedTokens;
         mapping(uint256 tokenId => uint256) _ownedTokensIndex;
-
         uint256[] _allTokens;
         mapping(uint256 tokenId => uint256) _allTokensIndex;
     }
 
     // keccak256(abi.encode(uint256(keccak256("openzeppelin.storage.ERC721Enumerable")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 private constant ERC721EnumerableStorageLocation = 0x645e039705490088daad89bae25049a34f4a9072d398537b1ab2425f24cbed00;
+    bytes32 private constant ERC721EnumerableStorageLocation =
+        0x645e039705490088daad89bae25049a34f4a9072d398537b1ab2425f24cbed00;
 
-    function _getERC721EnumerableStorage() private pure returns (ERC721EnumerableStorage storage $) {
+    function _getERC721EnumerableStorage()
+        private
+        pure
+        returns (ERC721EnumerableStorage storage $)
+    {
         assembly {
             $.slot := ERC721EnumerableStorageLocation
         }
@@ -46,22 +54,27 @@ abstract contract ERC721EnumerableUpgradeable is Initializable, ERC721Upgradeabl
      */
     error ERC721EnumerableForbiddenBatchMint();
 
-    function __ERC721Enumerable_init() internal onlyInitializing {
-    }
+    function __ERC721Enumerable_init() internal onlyInitializing {}
 
-    function __ERC721Enumerable_init_unchained() internal onlyInitializing {
-    }
+    function __ERC721Enumerable_init_unchained() internal onlyInitializing {}
     /**
      * @dev See {IERC165-supportsInterface}.
      */
-    function supportsInterface(bytes4 interfaceId) public view virtual override(IERC165, ERC721Upgradeable) returns (bool) {
-        return interfaceId == type(IERC721Enumerable).interfaceId || super.supportsInterface(interfaceId);
+    function supportsInterface(
+        bytes4 interfaceId
+    ) public view virtual override(IERC165, ERC721Upgradeable) returns (bool) {
+        return
+            interfaceId == type(IERC721Enumerable).interfaceId ||
+            super.supportsInterface(interfaceId);
     }
 
     /**
      * @dev See {IERC721Enumerable-tokenOfOwnerByIndex}.
      */
-    function tokenOfOwnerByIndex(address owner, uint256 index) public view virtual returns (uint256) {
+    function tokenOfOwnerByIndex(
+        address owner,
+        uint256 index
+    ) public view virtual returns (uint256) {
         ERC721EnumerableStorage storage $ = _getERC721EnumerableStorage();
         if (index >= balanceOf(owner)) {
             revert ERC721OutOfBoundsIndex(owner, index);
@@ -91,7 +104,11 @@ abstract contract ERC721EnumerableUpgradeable is Initializable, ERC721Upgradeabl
     /**
      * @dev See {ERC721-_update}.
      */
-    function _update(address to, uint256 tokenId, address auth) internal virtual override returns (address) {
+    function _update(
+        address to,
+        uint256 tokenId,
+        address auth
+    ) internal virtual override returns (address) {
         address previousOwner = super._update(to, tokenId, auth);
 
         if (previousOwner == address(0)) {
@@ -138,7 +155,10 @@ abstract contract ERC721EnumerableUpgradeable is Initializable, ERC721Upgradeabl
      * @param from address representing the previous owner of the given token ID
      * @param tokenId uint256 ID of the token to be removed from the tokens list of the given address
      */
-    function _removeTokenFromOwnerEnumeration(address from, uint256 tokenId) private {
+    function _removeTokenFromOwnerEnumeration(
+        address from,
+        uint256 tokenId
+    ) private {
         ERC721EnumerableStorage storage $ = _getERC721EnumerableStorage();
         // To prevent a gap in from's tokens array, we store the last token in the index of the token to delete, and
         // then delete the last slot (swap and pop).
@@ -146,7 +166,8 @@ abstract contract ERC721EnumerableUpgradeable is Initializable, ERC721Upgradeabl
         uint256 lastTokenIndex = balanceOf(from);
         uint256 tokenIndex = $._ownedTokensIndex[tokenId];
 
-        mapping(uint256 index => uint256) storage _ownedTokensByOwner = $._ownedTokens[from];
+        mapping(uint256 index => uint256) storage _ownedTokensByOwner = $
+            ._ownedTokens[from];
 
         // When the token to delete is the last token, the swap operation is unnecessary
         if (tokenIndex != lastTokenIndex) {
@@ -190,7 +211,10 @@ abstract contract ERC721EnumerableUpgradeable is Initializable, ERC721Upgradeabl
     /**
      * See {ERC721-_increaseBalance}. We need that to account tokens that were minted in batch
      */
-    function _increaseBalance(address account, uint128 amount) internal virtual override {
+    function _increaseBalance(
+        address account,
+        uint128 amount
+    ) internal virtual override {
         if (amount > 0) {
             revert ERC721EnumerableForbiddenBatchMint();
         }

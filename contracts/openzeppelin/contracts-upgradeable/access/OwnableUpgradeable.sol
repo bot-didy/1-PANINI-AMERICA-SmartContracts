@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // OpenZeppelin Contracts (last updated v5.0.0) (access/Ownable.sol)
 
-pragma solidity ^0.8.20;
+pragma solidity 0.8.28;
 
 import {ContextUpgradeable} from "../utils/ContextUpgradeable.sol";
 import {Initializable} from "../proxy/utils/Initializable.sol";
@@ -25,9 +25,14 @@ abstract contract OwnableUpgradeable is Initializable, ContextUpgradeable {
     }
 
     // keccak256(abi.encode(uint256(keccak256("openzeppelin.storage.Ownable")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 private constant OwnableStorageLocation = 0x9016d09d72d40fdae2fd8ceac6b6234c7706214fd39c1cd1e609a0528c199300;
+    bytes32 private constant OwnableStorageLocation =
+        0x9016d09d72d40fdae2fd8ceac6b6234c7706214fd39c1cd1e609a0528c199300;
 
-    function _getOwnableStorage() private pure returns (OwnableStorage storage $) {
+    function _getOwnableStorage()
+        private
+        pure
+        returns (OwnableStorage storage $)
+    {
         assembly {
             $.slot := OwnableStorageLocation
         }
@@ -43,7 +48,10 @@ abstract contract OwnableUpgradeable is Initializable, ContextUpgradeable {
      */
     error OwnableInvalidOwner(address owner);
 
-    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+    event OwnershipTransferred(
+        address indexed previousOwner,
+        address indexed newOwner
+    );
 
     /**
      * @dev Initializes the contract setting the address provided by the deployer as the initial owner.
@@ -52,7 +60,9 @@ abstract contract OwnableUpgradeable is Initializable, ContextUpgradeable {
         __Ownable_init_unchained(initialOwner);
     }
 
-    function __Ownable_init_unchained(address initialOwner) internal onlyInitializing {
+    function __Ownable_init_unchained(
+        address initialOwner
+    ) internal onlyInitializing {
         if (initialOwner == address(0)) {
             revert OwnableInvalidOwner(address(0));
         }

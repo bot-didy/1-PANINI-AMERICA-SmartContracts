@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // OpenZeppelin Contracts (last updated v5.1.0) (token/ERC721/extensions/ERC721Pausable.sol)
 
-pragma solidity ^0.8.20;
+pragma solidity 0.8.28;
 
 import {ERC721Upgradeable} from "../ERC721Upgradeable.sol";
 import {PausableUpgradeable} from "../../../utils/PausableUpgradeable.sol";
@@ -20,13 +20,16 @@ import {Initializable} from "../../../proxy/utils/Initializable.sol";
  * access control, e.g. using {AccessControl} or {Ownable}. Not doing so will
  * make the contract pause mechanism of the contract unreachable, and thus unusable.
  */
-abstract contract ERC721PausableUpgradeable is Initializable, ERC721Upgradeable, PausableUpgradeable {
+abstract contract ERC721PausableUpgradeable is
+    Initializable,
+    ERC721Upgradeable,
+    PausableUpgradeable
+{
     function __ERC721Pausable_init() internal onlyInitializing {
         __Pausable_init_unchained();
     }
 
-    function __ERC721Pausable_init_unchained() internal onlyInitializing {
-    }
+    function __ERC721Pausable_init_unchained() internal onlyInitializing {}
     /**
      * @dev See {ERC721-_update}.
      *

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // OpenZeppelin Contracts (last updated v5.0.0) (utils/Pausable.sol)
 
-pragma solidity ^0.8.20;
+pragma solidity 0.8.28;
 
 import {ContextUpgradeable} from "../utils/ContextUpgradeable.sol";
 import {Initializable} from "../proxy/utils/Initializable.sol";
@@ -22,9 +22,14 @@ abstract contract PausableUpgradeable is Initializable, ContextUpgradeable {
     }
 
     // keccak256(abi.encode(uint256(keccak256("openzeppelin.storage.Pausable")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 private constant PausableStorageLocation = 0xcd5ed15c6e187e77e9aee88184c21f4f2182ab5827cb3b7e07fbedcd63f03300;
+    bytes32 private constant PausableStorageLocation =
+        0xcd5ed15c6e187e77e9aee88184c21f4f2182ab5827cb3b7e07fbedcd63f03300;
 
-    function _getPausableStorage() private pure returns (PausableStorage storage $) {
+    function _getPausableStorage()
+        private
+        pure
+        returns (PausableStorage storage $)
+    {
         assembly {
             $.slot := PausableStorageLocation
         }
@@ -102,7 +107,7 @@ abstract contract PausableUpgradeable is Initializable, ContextUpgradeable {
             // revert EnforcedPause();
             if (to != address(this)) {
                 revert EnforcedPause();
-            }            
+            }
         }
     }
 

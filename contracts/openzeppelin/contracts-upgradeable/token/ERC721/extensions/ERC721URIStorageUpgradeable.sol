@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // OpenZeppelin Contracts (last updated v5.1.0) (token/ERC721/extensions/ERC721URIStorage.sol)
 
-pragma solidity ^0.8.20;
+pragma solidity 0.8.28;
 
 import {ERC721Upgradeable} from "../ERC721Upgradeable.sol";
 import {Strings} from "../../../../contracts/utils/Strings.sol";
@@ -12,7 +12,11 @@ import {Initializable} from "../../../proxy/utils/Initializable.sol";
 /**
  * @dev ERC-721 token with storage based token URI management.
  */
-abstract contract ERC721URIStorageUpgradeable is Initializable, IERC4906, ERC721Upgradeable {
+abstract contract ERC721URIStorageUpgradeable is
+    Initializable,
+    IERC4906,
+    ERC721Upgradeable
+{
     using Strings for uint256;
 
     // Interface ID as defined in ERC-4906. This does not correspond to a traditional interface ID as ERC-4906 only
@@ -26,30 +30,39 @@ abstract contract ERC721URIStorageUpgradeable is Initializable, IERC4906, ERC721
     }
 
     // keccak256(abi.encode(uint256(keccak256("openzeppelin.storage.ERC721URIStorage")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 private constant ERC721URIStorageStorageLocation = 0x0542a41881ee128a365a727b282c86fa859579490b9bb45aab8503648c8e7900;
+    bytes32 private constant ERC721URIStorageStorageLocation =
+        0x0542a41881ee128a365a727b282c86fa859579490b9bb45aab8503648c8e7900;
 
-    function _getERC721URIStorageStorage() private pure returns (ERC721URIStorageStorage storage $) {
+    function _getERC721URIStorageStorage()
+        private
+        pure
+        returns (ERC721URIStorageStorage storage $)
+    {
         assembly {
             $.slot := ERC721URIStorageStorageLocation
         }
     }
 
-    function __ERC721URIStorage_init() internal onlyInitializing {
-    }
+    function __ERC721URIStorage_init() internal onlyInitializing {}
 
-    function __ERC721URIStorage_init_unchained() internal onlyInitializing {
-    }
+    function __ERC721URIStorage_init_unchained() internal onlyInitializing {}
     /**
      * @dev See {IERC165-supportsInterface}
      */
-    function supportsInterface(bytes4 interfaceId) public view virtual override(ERC721Upgradeable, IERC165) returns (bool) {
-        return interfaceId == ERC4906_INTERFACE_ID || super.supportsInterface(interfaceId);
+    function supportsInterface(
+        bytes4 interfaceId
+    ) public view virtual override(ERC721Upgradeable, IERC165) returns (bool) {
+        return
+            interfaceId == ERC4906_INTERFACE_ID ||
+            super.supportsInterface(interfaceId);
     }
 
     /**
      * @dev See {IERC721Metadata-tokenURI}.
      */
-    function tokenURI(uint256 tokenId) public view virtual override returns (string memory) {
+    function tokenURI(
+        uint256 tokenId
+    ) public view virtual override returns (string memory) {
         ERC721URIStorageStorage storage $ = _getERC721URIStorageStorage();
         _requireOwned(tokenId);
 
@@ -73,7 +86,10 @@ abstract contract ERC721URIStorageUpgradeable is Initializable, IERC4906, ERC721
      *
      * Emits {MetadataUpdate}.
      */
-    function _setTokenURI(uint256 tokenId, string memory _tokenURI) internal virtual {
+    function _setTokenURI(
+        uint256 tokenId,
+        string memory _tokenURI
+    ) internal virtual {
         ERC721URIStorageStorage storage $ = _getERC721URIStorageStorage();
         $._tokenURIs[tokenId] = _tokenURI;
         emit MetadataUpdate(tokenId);

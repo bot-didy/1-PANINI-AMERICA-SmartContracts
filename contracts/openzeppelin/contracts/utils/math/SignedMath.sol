@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // OpenZeppelin Contracts (last updated v5.1.0) (utils/math/SignedMath.sol)
 
-pragma solidity ^0.8.20;
+pragma solidity 0.8.28;
 
 import {SafeCast} from "./SafeCast.sol";
 
@@ -16,7 +16,11 @@ library SignedMath {
      * However, the compiler may optimize Solidity ternary operations (i.e. `a ? b : c`) to only compute
      * one branch when needed, making this function more expensive.
      */
-    function ternary(bool condition, int256 a, int256 b) internal pure returns (int256) {
+    function ternary(
+        bool condition,
+        int256 a,
+        int256 b
+    ) internal pure returns (int256) {
         unchecked {
             // branchless ternary works because:
             // b ^ (a ^ b) == a
