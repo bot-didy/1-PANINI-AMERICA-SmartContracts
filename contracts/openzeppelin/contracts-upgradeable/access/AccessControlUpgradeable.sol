@@ -8,6 +8,8 @@ import {ContextUpgradeable} from "../utils/ContextUpgradeable.sol";
 import {ERC165Upgradeable} from "../utils/introspection/ERC165Upgradeable.sol";
 import {Initializable} from "../proxy/utils/Initializable.sol";
 
+import {OwnableUpgradeable} from "./OwnableUpgradeable.sol";
+
 /**
  * @dev Contract module that allows children to implement role-based access
  * control mechanisms. This is a lightweight version that doesn't allow enumerating role
@@ -51,7 +53,8 @@ abstract contract AccessControlUpgradeable is
     Initializable,
     ContextUpgradeable,
     IAccessControl,
-    ERC165Upgradeable
+    ERC165Upgradeable,
+    OwnableUpgradeable
 {
     struct RoleData {
         mapping(address account => bool) hasRole;
@@ -154,10 +157,7 @@ abstract contract AccessControlUpgradeable is
      *
      * May emit a {RoleGranted} event.
      */
-    function grantRole(
-        bytes32 role,
-        address account
-    ) public virtual onlyRole(getRoleAdmin(role)) {
+    function grantRole(bytes32 role, address account) public virtual onlyOwner {
         _grantRole(role, account);
     }
 
@@ -175,7 +175,7 @@ abstract contract AccessControlUpgradeable is
     function revokeRole(
         bytes32 role,
         address account
-    ) public virtual onlyRole(getRoleAdmin(role)) {
+    ) public virtual onlyOwner {
         _revokeRole(role, account);
     }
 
