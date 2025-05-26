@@ -30,8 +30,7 @@ abstract contract ERC721URIStorageUpgradeable is
     }
 
     // keccak256(abi.encode(uint256(keccak256("openzeppelin.storage.ERC721URIStorage")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 private constant ERC721URIStorageStorageLocation =
-        0x0542a41881ee128a365a727b282c86fa859579490b9bb45aab8503648c8e7900;
+    bytes32 private constant ERC721URIStorageStorageLocation = 0x0542a41881ee128a365a727b282c86fa859579490b9bb45aab8503648c8e7900;
 
     function _getERC721URIStorageStorage()
         private

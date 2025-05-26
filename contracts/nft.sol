@@ -10,7 +10,7 @@ import {Initializable} from "./openzeppelin/contracts-upgradeable/proxy/utils/In
 import {OwnableUpgradeable} from "./openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {ERC2981Upgradeable} from "./openzeppelin/contracts-upgradeable/token/common/ERC2981Upgradeable.sol";
 import {AccessControlUpgradeable} from "./openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import {PaniniValidator} from "./panini-smartlocks/PaniniValidator.sol";
+import {SmartValidator} from "./smartlocks/SmartValidator.sol";
 import {CreatorTokenValidator} from "./limitbreak/CreatorTokenValidator.sol";
 import {VerifyByteSignature} from "./openzeppelin/contracts/utils/VerifyByteSignature.sol";
 
@@ -25,7 +25,7 @@ contract PhoenixNFTs is
     VerifyByteSignature,
     ERC2981Upgradeable,
     AccessControlUpgradeable,
-    PaniniValidator,
+    SmartValidator,
     CreatorTokenValidator
 {
     bytes32 public constant PANINI_NFT_OPERATOR =
@@ -69,7 +69,7 @@ contract PhoenixNFTs is
         __ERC721Burnable_init();
         __ERC2981_init(receiver, feeNumerator);
         __CreatorTokenValidator_init();
-        __PaniniValidator_init();
+        __SmartValidator_init();
 
         _grantRole(DEFAULT_ADMIN_ROLE, initialOwner);
         _grantRole(PANINI_NFT_OPERATOR, initialOwner);
@@ -199,6 +199,7 @@ contract PhoenixNFTs is
 
     /**
      * @notice Validates the operator before setting approval.
+     * add extra check for operator
      */
     function approve(
         address operator,
@@ -210,6 +211,7 @@ contract PhoenixNFTs is
 
     /**
      * @notice See {IERC721-isApprovedForAll}.
+     * add extra check for operator
      */
     function isApprovedForAll(
         address owner,
@@ -374,6 +376,7 @@ contract PhoenixNFTs is
     function ownersOf(
         uint256[] calldata tokenIds
     ) external view returns (TokenOwner[] memory) {
+        require( tokenIds.length <= 25,"Input array length can't be greater than 25");
         TokenOwner[] memory result = new TokenOwner[](tokenIds.length);
         for (uint256 i = 0; i < tokenIds.length; i++) {
             result[i] = TokenOwner(tokenIds[i], ownerOf(tokenIds[i]));

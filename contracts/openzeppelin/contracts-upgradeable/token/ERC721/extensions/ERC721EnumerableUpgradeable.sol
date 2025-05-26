@@ -29,8 +29,7 @@ abstract contract ERC721EnumerableUpgradeable is
     }
 
     // keccak256(abi.encode(uint256(keccak256("openzeppelin.storage.ERC721Enumerable")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 private constant ERC721EnumerableStorageLocation =
-        0x645e039705490088daad89bae25049a34f4a9072d398537b1ab2425f24cbed00;
+    bytes32 private constant ERC721EnumerableStorageLocation = 0x645e039705490088daad89bae25049a34f4a9072d398537b1ab2425f24cbed00;
 
     function _getERC721EnumerableStorage()
         private

@@ -4,16 +4,16 @@ pragma solidity 0.8.28;
 import "../openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {Initializable} from "../openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-contract PaniniValidator is Initializable, AccessControlUpgradeable {
-    bytes32 public constant WHITELISTED_MARKETPLACE =
-        keccak256("WHITELISTED_MARKETPLACE");
+//PaniniValidator
+contract SmartValidator is Initializable, AccessControlUpgradeable {
+    bytes32 public constant WHITELISTED_MARKETPLACE = keccak256("WHITELISTED_MARKETPLACE");
     bool public paniniLock;
 
     error InvalidOperator(string errorText);
 
     // @notice Initializes the contract instead of constructor
 
-    function __PaniniValidator_init() internal onlyInitializing {
+    function __SmartValidator_init() internal onlyInitializing {
         paniniLock = true;
     }
 
