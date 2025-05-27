@@ -8,6 +8,8 @@ import {ContextUpgradeable} from "../utils/ContextUpgradeable.sol";
 import {ERC165Upgradeable} from "../utils/introspection/ERC165Upgradeable.sol";
 import {Initializable} from "../proxy/utils/Initializable.sol";
 
+import {Ownable2StepUpgradeable} from "./Ownable2StepUpgradeable.sol";
+
 /**
  * @dev Contract module that allows children to implement role-based access
  * control mechanisms. This is a lightweight version that doesn't allow enumerating role
@@ -51,7 +53,8 @@ abstract contract AccessControlUpgradeable is
     Initializable,
     ContextUpgradeable,
     IAccessControl,
-    ERC165Upgradeable
+    ERC165Upgradeable,
+    Ownable2StepUpgradeable
 {
     struct RoleData {
         mapping(address account => bool) hasRole;
@@ -66,7 +69,8 @@ abstract contract AccessControlUpgradeable is
     }
 
     // keccak256(abi.encode(uint256(keccak256("openzeppelin.storage.AccessControl")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 private constant AccessControlStorageLocation = 0x02dd7bc7dec4dceedda775e58dd541e08a116c6c53815c0bd028192f7b626800;
+    bytes32 private constant AccessControlStorageLocation =
+        0x02dd7bc7dec4dceedda775e58dd541e08a116c6c53815c0bd028192f7b626800;
 
     function _getAccessControlStorage()
         private
@@ -153,10 +157,7 @@ abstract contract AccessControlUpgradeable is
      *
      * May emit a {RoleGranted} event.
      */
-    function grantRole(
-        bytes32 role,
-        address account
-    ) public virtual onlyRole(getRoleAdmin(role)) {
+    function grantRole(bytes32 role, address account) public virtual onlyOwner {
         _grantRole(role, account);
     }
 
@@ -174,7 +175,7 @@ abstract contract AccessControlUpgradeable is
     function revokeRole(
         bytes32 role,
         address account
-    ) public virtual onlyRole(getRoleAdmin(role)) {
+    ) public virtual onlyOwner {
         _revokeRole(role, account);
     }
 

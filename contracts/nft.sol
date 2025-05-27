@@ -7,20 +7,23 @@ import {ERC721EnumerableUpgradeable} from "./openzeppelin/contracts-upgradeable/
 import {ERC721PausableUpgradeable} from "./openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721PausableUpgradeable.sol";
 import {ERC721URIStorageUpgradeable} from "./openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721URIStorageUpgradeable.sol";
 import {Initializable} from "./openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import {OwnableUpgradeable} from "./openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {Ownable2StepUpgradeable} from "./openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import {ERC2981Upgradeable} from "./openzeppelin/contracts-upgradeable/token/common/ERC2981Upgradeable.sol";
 import {AccessControlUpgradeable} from "./openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {SmartValidator} from "./smartlocks/SmartValidator.sol";
 import {CreatorTokenValidator} from "./limitbreak/CreatorTokenValidator.sol";
 import {VerifyByteSignature} from "./openzeppelin/contracts/utils/VerifyByteSignature.sol";
 
+/// @title PhoenixNFTs - An upgradeable ERC721 contract with extended features like pausing, burning, royalties, role-based access, and signature-based minting/unlocking
+/// @notice This contract allows controlled minting, locking, and unlocking of NFTs using off-chain signatures with replay protection
+/// @dev Inherits from multiple OpenZeppelin upgradeable extensions and includes custom signature validation
 contract PhoenixNFTs is
     Initializable,
     ERC721Upgradeable,
     ERC721EnumerableUpgradeable,
     ERC721URIStorageUpgradeable,
     ERC721PausableUpgradeable,
-    OwnableUpgradeable,
+    Ownable2StepUpgradeable,
     ERC721BurnableUpgradeable,
     VerifyByteSignature,
     ERC2981Upgradeable,
@@ -28,61 +31,73 @@ contract PhoenixNFTs is
     SmartValidator,
     CreatorTokenValidator
 {
+    /// @notice Role identifier for operators allowed to mint and manage NFTs
     bytes32 public constant PANINI_NFT_OPERATOR =
         keccak256("PANINI_NFT_OPERATOR");
-
-    /// @notice Mapping to track used nonces to prevent replay attacks
+    /// @notice Tracks used nonces to prevent signature replay attacks
     mapping(uint256 => bool) public usedNonces;
+    /// @notice Tracks token IDs that have been burned to prevent reuse
     mapping(uint256 => bool) public burnedTokenIds;
+    /// @notice Toggle to control whether token burning is enabled
     bool public isBurnEnabled;
-
-    //just for view method, stores nothing
+    /// @notice A lightweight struct used in view-only methods to return token ownership
     struct TokenOwner {
         uint256 tokenId;
         address owner;
     }
-    /// @notice Event emitted when NFTs are minted or unlocked
+    /// @notice Emitted when tokens are minted or unlocked via signature-based request
     event NFTBatchMintedOrUnlocked(
         uint256 indexed requestNonce,
         address indexed owner,
         uint256[] tokenIds
     );
 
-    /// @notice Event emitted when NFTs are locked for bridging
+    // @notice Emitted when tokens are locked for bridging via signature-based request
     event NFTBatchLocked(
         uint256 indexed requestNonce,
         address indexed owner,
         uint256[] tokenIds
     );
 
+    /// @notice Initializes the NFT contract with royalty and access control
+    /// @param initialOwner Address to be assigned as the initial contract owner
+    /// @param receiver Address to receive royalty fees
+    /// @param feeNumerator Royalty fee (basis points format, e.g., 500 = 5%)
     function initialize(
         address initialOwner,
         address receiver,
         uint96 feeNumerator
     ) public initializer {
         __ERC721_init("SuperSonicNfts", "SuperSonicNfts");
-        // __ERC721_init("PhoenixNfts", "PhoenixNfts");
         __ERC721Enumerable_init();
         __ERC721URIStorage_init();
         __ERC721Pausable_init();
         __Ownable_init(initialOwner);
+        __Ownable2Step_init();
+        __Ownable2Step_init_unchained();
         __ERC721Burnable_init();
         __ERC2981_init(receiver, feeNumerator);
         __CreatorTokenValidator_init();
         __SmartValidator_init();
-
         _grantRole(DEFAULT_ADMIN_ROLE, initialOwner);
         _grantRole(PANINI_NFT_OPERATOR, initialOwner);
     }
 
+    /// @notice Pauses all token transfers
     function pause() public onlyOwner {
         _pause();
     }
 
+    /// @notice Unpauses all token transfers
     function unpause() public onlyOwner {
         _unpause();
     }
 
+    /// @notice Mints a new NFT
+    /// @param to The address that will own the minted token
+    /// @param tokenId The ID of the token to be minted
+    /// @param uri Metadata URI associated with the token
+    /// @dev can only called by PANINI_NFT_OPERATOR
     function safeMint(
         address to,
         uint256 tokenId,
@@ -97,6 +112,7 @@ contract PhoenixNFTs is
     }
 
     // The following functions are overrides required by Solidity.
+    /// @inheritdoc ERC721Upgradeable
     function _update(
         address to,
         uint256 tokenId,
@@ -119,6 +135,7 @@ contract PhoenixNFTs is
         return super._update(to, tokenId, auth);
     }
 
+    /// @inheritdoc ERC721Upgradeable
     function _increaseBalance(
         address account,
         uint128 value
@@ -142,6 +159,7 @@ contract PhoenixNFTs is
         return super.tokenURI(tokenId);
     }
 
+    /// @inheritdoc ERC721Upgradeable
     function supportsInterface(
         bytes4 interfaceId
     )
@@ -159,12 +177,11 @@ contract PhoenixNFTs is
         return super.supportsInterface(interfaceId);
     }
 
-    /**
-     * @notice Mints multiple NFTs in a batch.
-     * @param to Address receiving the NFTs.
-     * @param tokenIds Array of token IDs.
-     * @param uris Array of metadata URIs.
-     */
+    /// @notice Batch mints multiple NFTs to a single address
+    /// @param to Recipient address
+    /// @param tokenIds Array of token IDs to mint
+    /// @param uris Array of metadata URIs for each token
+    /// @dev can only called by the PANINI_NFT_OPERATOR
     function batchMint(
         address to,
         uint256[] memory tokenIds,
@@ -189,6 +206,7 @@ contract PhoenixNFTs is
     /**
      * @notice Validates the operator before setting approval.
      */
+    /// @inheritdoc ERC721Upgradeable
     function setApprovalForAll(
         address operator,
         bool approved
@@ -201,6 +219,7 @@ contract PhoenixNFTs is
      * @notice Validates the operator before setting approval.
      * add extra check for operator
      */
+    /// @inheritdoc ERC721Upgradeable
     function approve(
         address operator,
         uint256 tokenId
@@ -213,6 +232,7 @@ contract PhoenixNFTs is
      * @notice See {IERC721-isApprovedForAll}.
      * add extra check for operator
      */
+    /// @inheritdoc ERC721Upgradeable
     function isApprovedForAll(
         address owner,
         address operator
@@ -221,19 +241,11 @@ contract PhoenixNFTs is
         return super.isApprovedForAll(owner, operator);
     }
 
-    /**
-     * @notice Burns the specified NFT token, permanently removing it from circulation.
-     * @dev
-     * - Burning is only allowed if `enableBurn` is set to true.
-     * - Only the current owner of the token can call this function.
-     * - Clears the royalty information for the burned token.
-     *
-     * Emits a {Burned} event.
-     *
-     * @param tokenId The ID of the token to be burned.
-     */
+    /// @notice Burns the specified NFT
+    /// @param tokenId Token ID to burn
+    /// @dev Can only be called by the token owner and when burn is enabled
     function burn(uint256 tokenId) public virtual override {
-        require(isBurnEnabled == true, "Burning NFT is not enabled");
+        require(isBurnEnabled, "Burning NFT is not enabled");
         require(_ownerOf(tokenId) == _msgSender(), "Only token owner can burn");
         super._burn(tokenId);
         burnedTokenIds[tokenId] = true;
@@ -376,7 +388,10 @@ contract PhoenixNFTs is
     function ownersOf(
         uint256[] calldata tokenIds
     ) external view returns (TokenOwner[] memory) {
-        require( tokenIds.length <= 25,"Input array length can't be greater than 25");
+        require(
+            tokenIds.length <= 25,
+            "Input array length can't be greater than 25"
+        );
         TokenOwner[] memory result = new TokenOwner[](tokenIds.length);
         for (uint256 i = 0; i < tokenIds.length; i++) {
             result[i] = TokenOwner(tokenIds[i], ownerOf(tokenIds[i]));
