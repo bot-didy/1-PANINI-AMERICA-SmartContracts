@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import "../openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "../openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import "./interfaces/ICreatorToken.sol";
 import "./interfaces/ICreatorTokenLegacy.sol";
 import "./interfaces/ITransferValidator.sol";
@@ -28,12 +28,16 @@ import "./interfaces/ITransferValidatorSetTokenType.sol";
  * <h4>Compatibility:</h4>
  * <ul>Backward and Forward Compatible - V1/V2/V3 Creator Token Base will work with V1/V2/V3 Transfer Validators.</ul>
  */
-abstract contract CreatorTokenValidator is OwnableUpgradeable, ICreatorToken {
+abstract contract CreatorTokenValidator is
+    Ownable2StepUpgradeable,
+    ICreatorToken
+{
     /// @dev Thrown when setting a transfer validator address that has no deployed code.
     error CreatorTokenBase__InvalidTransferValidatorContract();
 
     /// @dev The default transfer validator that will be used if no transfer validator has been set by the creator.
-    address public constant DEFAULT_TRANSFER_VALIDATOR = address(0x721C0078c2328597Ca70F5451ffF5A7B38D4E947);
+    address public constant DEFAULT_TRANSFER_VALIDATOR =
+        address(0x721C0078c2328597Ca70F5451ffF5A7B38D4E947);
     uint256 constant TOKEN_TYPE_ERC721 = 721;
 
     /// @dev Used to determine if the default transfer validator is applied.

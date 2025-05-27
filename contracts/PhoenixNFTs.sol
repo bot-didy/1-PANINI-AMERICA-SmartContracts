@@ -7,7 +7,7 @@ import {ERC721EnumerableUpgradeable} from "./openzeppelin/contracts-upgradeable/
 import {ERC721PausableUpgradeable} from "./openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721PausableUpgradeable.sol";
 import {ERC721URIStorageUpgradeable} from "./openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721URIStorageUpgradeable.sol";
 import {Initializable} from "./openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import {OwnableUpgradeable} from "./openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {Ownable2StepUpgradeable} from "./openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import {ERC2981Upgradeable} from "./openzeppelin/contracts-upgradeable/token/common/ERC2981Upgradeable.sol";
 import {AccessControlUpgradeable} from "./openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {SmartValidator} from "./smartlocks/SmartValidator.sol";
@@ -23,7 +23,7 @@ contract PhoenixNFTs is
     ERC721EnumerableUpgradeable,
     ERC721URIStorageUpgradeable,
     ERC721PausableUpgradeable,
-    OwnableUpgradeable,
+    Ownable2StepUpgradeable,
     ERC721BurnableUpgradeable,
     VerifyByteSignature,
     ERC2981Upgradeable,
@@ -73,6 +73,8 @@ contract PhoenixNFTs is
         __ERC721URIStorage_init();
         __ERC721Pausable_init();
         __Ownable_init(initialOwner);
+        __Ownable2Step_init();
+        __Ownable2Step_init_unchained();
         __ERC721Burnable_init();
         __ERC2981_init(receiver, feeNumerator);
         __CreatorTokenValidator_init();

@@ -7,20 +7,20 @@ import {ERC721EnumerableUpgradeable} from "./openzeppelin/contracts-upgradeable/
 import {ERC721PausableUpgradeable} from "./openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721PausableUpgradeable.sol";
 import {ERC721URIStorageUpgradeable} from "./openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721URIStorageUpgradeable.sol";
 import {Initializable} from "./openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import {OwnableUpgradeable} from "./openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {Ownable2StepUpgradeable} from "./openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import {ERC2981Upgradeable} from "./openzeppelin/contracts-upgradeable/token/common/ERC2981Upgradeable.sol";
 import {AccessControlUpgradeable} from "./openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {SmartValidator} from "./smartlocks/SmartValidator.sol";
 import {CreatorTokenValidator} from "./limitbreak/CreatorTokenValidator.sol";
 import {VerifyByteSignature} from "./openzeppelin/contracts/utils/VerifyByteSignature.sol";
 
-contract PhoenixNFTs is
+contract PhoenixNFTs2 is
     Initializable,
     ERC721Upgradeable,
     ERC721EnumerableUpgradeable,
     ERC721URIStorageUpgradeable,
     ERC721PausableUpgradeable,
-    OwnableUpgradeable,
+    Ownable2StepUpgradeable,
     ERC721BurnableUpgradeable,
     VerifyByteSignature,
     ERC2981Upgradeable,
@@ -66,6 +66,8 @@ contract PhoenixNFTs is
         __ERC721URIStorage_init();
         __ERC721Pausable_init();
         __Ownable_init(initialOwner);
+        __Ownable2Step_init();
+        __Ownable2Step_init_unchained();
         __ERC721Burnable_init();
         __ERC2981_init(receiver, feeNumerator);
         __CreatorTokenValidator_init();
@@ -376,7 +378,10 @@ contract PhoenixNFTs is
     function ownersOf(
         uint256[] calldata tokenIds
     ) external view returns (TokenOwner[] memory) {
-        require( tokenIds.length <= 25,"Input array length can't be greater than 25");
+        require(
+            tokenIds.length <= 25,
+            "Input array length can't be greater than 25"
+        );
         TokenOwner[] memory result = new TokenOwner[](tokenIds.length);
         for (uint256 i = 0; i < tokenIds.length; i++) {
             result[i] = TokenOwner(tokenIds[i], ownerOf(tokenIds[i]));
