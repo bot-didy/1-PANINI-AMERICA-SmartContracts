@@ -18,17 +18,6 @@ interface IAccessControl {
      */
     error AccessControlBadConfirmation();
 
-    /**
-     * @dev Emitted when `newAdminRole` is set as ``role``'s admin role, replacing `previousAdminRole`
-     *
-     * `DEFAULT_ADMIN_ROLE` is the starting admin for all roles, despite
-     * {RoleAdminChanged} not being emitted signaling this.
-     */
-    event RoleAdminChanged(
-        bytes32 indexed role,
-        bytes32 indexed previousAdminRole,
-        bytes32 indexed newAdminRole
-    );
 
     /**
      * @dev Emitted when `account` is granted `role`.
@@ -63,13 +52,6 @@ interface IAccessControl {
         address account
     ) external view returns (bool);
 
-    /**
-     * @dev Returns the admin role that controls `role`. See {grantRole} and
-     * {revokeRole}.
-     *
-     * To change a role's admin, use {AccessControl-_setRoleAdmin}.
-     */
-    function getRoleAdmin(bytes32 role) external view returns (bytes32);
 
     /**
      * @dev Grants `role` to `account`.

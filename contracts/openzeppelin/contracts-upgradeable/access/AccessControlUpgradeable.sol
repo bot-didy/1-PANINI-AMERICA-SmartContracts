@@ -11,14 +11,14 @@ import {Initializable} from "../proxy/utils/Initializable.sol";
 import {Ownable2StepUpgradeable} from "./Ownable2StepUpgradeable.sol";
 
 /**
- * NOTE: Updated exising AccessControlUpgradeable code slighty as we are using 
+ * NOTE: Updated exising AccessControlUpgradeable code slighty as we are using
  * OwnerShip, removed Admin role due to redundancy and all admin actions can be done owner.
  * @dev Contract module that allows children to implement role-based access
  * control mechanisms. This is a lightweight version that doesn't allow enumerating role
  * members except through off-chain means by accessing the contract event logs. Some
  * applications may benefit from on-chain enumerability, for those cases see
  * {AccessControlEnumerable}.
- * 
+ *
  *
  * Roles are referred to by their `bytes32` identifier. These should be exposed
  * in the external API and be unique. The best way to achieve this is by
@@ -52,7 +52,6 @@ abstract contract AccessControlUpgradeable is
         mapping(address account => bool) hasRole;
     }
 
-
     /// @custom:storage-location erc7201:openzeppelin.storage.AccessControl
     struct AccessControlStorage {
         mapping(bytes32 role => RoleData) _roles;
@@ -84,6 +83,7 @@ abstract contract AccessControlUpgradeable is
     function __AccessControl_init() internal onlyInitializing {}
 
     function __AccessControl_init_unchained() internal onlyInitializing {}
+
     /**
      * @dev See {IERC165-supportsInterface}.
      */
@@ -123,7 +123,6 @@ abstract contract AccessControlUpgradeable is
             revert AccessControlUnauthorizedAccount(account, role);
         }
     }
-
 
     /**
      * @dev Grants `role` to `account`.
@@ -185,7 +184,6 @@ abstract contract AccessControlUpgradeable is
 
         _revokeRole(role, callerConfirmation);
     }
-
 
     /**
      * @dev Attempts to grant `role` to `account` and returns a boolean indicating if `role` was granted.

@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 import "../openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {Initializable} from "../openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-//PaniniValidator
+//SmartValidator
 contract SmartValidator is Initializable, AccessControlUpgradeable {
     bytes32 public constant WHITELISTED_MARKETPLACE = keccak256("WHITELISTED_MARKETPLACE");
     bool public paniniLock;
@@ -62,7 +62,7 @@ contract SmartValidator is Initializable, AccessControlUpgradeable {
     }
 
     /// @notice Enable or disable Panini Lock
-    function setPaniniLock(bool _status) public onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setPaniniLock(bool _status) public onlyOwner {
         paniniLock = _status;
     }
 }

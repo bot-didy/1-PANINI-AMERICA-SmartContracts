@@ -79,7 +79,6 @@ contract PhoenixNFTs is
         __ERC2981_init(receiver, feeNumerator);
         __CreatorTokenValidator_init();
         __SmartValidator_init();
-        _grantRole(DEFAULT_ADMIN_ROLE, initialOwner);
         _grantRole(PANINI_NFT_OPERATOR, initialOwner);
     }
 
