@@ -277,7 +277,6 @@ contract PhoenixNFTs is
         );
         require(expiredAt > block.timestamp, "Signature expired");
         require(!usedNonces[requestNonce], "Nonce already used");
-        usedNonces[requestNonce] = true;
 
         bytes memory message = abi.encode(
             block.chainid,
@@ -288,6 +287,7 @@ contract PhoenixNFTs is
             expiredAt
         );
         require(_verifySignature(message, signature), "Invalid signature");
+        usedNonces[requestNonce] = true;
 
         for (uint256 i = 0; i < tokenIds.length; i++) {
             require(
@@ -329,7 +329,6 @@ contract PhoenixNFTs is
         );
         require(expiredAt > block.timestamp, "Signature expired");
         require(!usedNonces[requestNonce], "Nonce already used");
-        usedNonces[requestNonce] = true;
 
         bytes memory message = abi.encode(
             block.chainid,
@@ -339,6 +338,7 @@ contract PhoenixNFTs is
             expiredAt
         );
         require(_verifySignature(message, signature), "Invalid signature");
+        usedNonces[requestNonce] = true;
 
         for (uint256 i = 0; i < tokenIds.length; i++) {
             _bridgeLockTransfer(_msgSender(), address(this), tokenIds[i]);

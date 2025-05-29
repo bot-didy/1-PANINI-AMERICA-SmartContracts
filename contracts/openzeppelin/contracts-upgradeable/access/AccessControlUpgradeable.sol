@@ -11,11 +11,14 @@ import {Initializable} from "../proxy/utils/Initializable.sol";
 import {Ownable2StepUpgradeable} from "./Ownable2StepUpgradeable.sol";
 
 /**
+ * NOTE: Updated exising AccessControlUpgradeable code slighty as we are using 
+ * OwnerShip, removed Admin role due to redundancy and all admin actions can be done owner.
  * @dev Contract module that allows children to implement role-based access
  * control mechanisms. This is a lightweight version that doesn't allow enumerating role
  * members except through off-chain means by accessing the contract event logs. Some
  * applications may benefit from on-chain enumerability, for those cases see
  * {AccessControlEnumerable}.
+ * 
  *
  * Roles are referred to by their `bytes32` identifier. These should be exposed
  * in the external API and be unique. The best way to achieve this is by
@@ -36,18 +39,7 @@ import {Ownable2StepUpgradeable} from "./Ownable2StepUpgradeable.sol";
  * ```
  *
  * Roles can be granted and revoked dynamically via the {grantRole} and
- * {revokeRole} functions. Each role has an associated admin role, and only
- * accounts that have a role's admin role can call {grantRole} and {revokeRole}.
- *
- * By default, the admin role for all roles is `DEFAULT_ADMIN_ROLE`, which means
- * that only accounts with this role will be able to grant or revoke other
- * roles. More complex role relationships can be created by using
- * {_setRoleAdmin}.
- *
- * WARNING: The `DEFAULT_ADMIN_ROLE` is also its own admin: it has permission to
- * grant and revoke this role. Extra precautions should be taken to secure
- * accounts that have been granted it. We recommend using {AccessControlDefaultAdminRules}
- * to enforce additional security measures for this role.
+ * {revokeRole} functions. Only owner can call {grantRole} and {revokeRole}.
  */
 abstract contract AccessControlUpgradeable is
     Initializable,
@@ -58,10 +50,8 @@ abstract contract AccessControlUpgradeable is
 {
     struct RoleData {
         mapping(address account => bool) hasRole;
-        bytes32 adminRole;
     }
 
-    bytes32 public constant DEFAULT_ADMIN_ROLE = 0x00;
 
     /// @custom:storage-location erc7201:openzeppelin.storage.AccessControl
     struct AccessControlStorage {
@@ -134,16 +124,6 @@ abstract contract AccessControlUpgradeable is
         }
     }
 
-    /**
-     * @dev Returns the admin role that controls `role`. See {grantRole} and
-     * {revokeRole}.
-     *
-     * To change a role's admin, use {_setRoleAdmin}.
-     */
-    function getRoleAdmin(bytes32 role) public view virtual returns (bytes32) {
-        AccessControlStorage storage $ = _getAccessControlStorage();
-        return $._roles[role].adminRole;
-    }
 
     /**
      * @dev Grants `role` to `account`.
@@ -153,7 +133,7 @@ abstract contract AccessControlUpgradeable is
      *
      * Requirements:
      *
-     * - the caller must have ``role``'s admin role.
+     * - the caller must be owner .
      *
      * May emit a {RoleGranted} event.
      */
@@ -168,7 +148,7 @@ abstract contract AccessControlUpgradeable is
      *
      * Requirements:
      *
-     * - the caller must have ``role``'s admin role.
+     * - the caller must be owner .
      *
      * May emit a {RoleRevoked} event.
      */
@@ -206,17 +186,6 @@ abstract contract AccessControlUpgradeable is
         _revokeRole(role, callerConfirmation);
     }
 
-    /**
-     * @dev Sets `adminRole` as ``role``'s admin role.
-     *
-     * Emits a {RoleAdminChanged} event.
-     */
-    function _setRoleAdmin(bytes32 role, bytes32 adminRole) internal virtual {
-        AccessControlStorage storage $ = _getAccessControlStorage();
-        bytes32 previousAdminRole = getRoleAdmin(role);
-        $._roles[role].adminRole = adminRole;
-        emit RoleAdminChanged(role, previousAdminRole, adminRole);
-    }
 
     /**
      * @dev Attempts to grant `role` to `account` and returns a boolean indicating if `role` was granted.
