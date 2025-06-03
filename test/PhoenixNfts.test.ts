@@ -25,14 +25,13 @@ const signMessageMintOrUnlock = async (wallet:any, message:any) => {
   return await wallet.signMessage(ethers.getBytes(hash));
 };
 
-
 describe("PhoenixNFTs", function () {
   let phoenixNFTs;
   let owner:any, operator:any, user1:any, user2:any ;
   let nftContract:any;
   const feeNumerator = 500; // 5%
   const name = "SuperSonicNfts";
-  const symbol = "MTK2";
+  const symbol = "SuperSonicNfts";
 
   beforeEach(async () => {
     [owner, operator, user1, user2] = await ethers.getSigners();
@@ -47,12 +46,12 @@ describe("PhoenixNFTs", function () {
   describe("Deployment", function () {
     it("should initialize with correct values", async () => {
       expect(await nftContract.name()).to.equal(name);
-      // expect(await nftContract.symbol()).to.equal(symbol);
+      expect(await nftContract.symbol()).to.equal(symbol);
       expect(await nftContract.owner()).to.equal(owner.address);
     });
   });
 
-  describe("Minting", function () {
+  describe("Minting NFT by Operator", function () {
     it("should mint a token", async () => {
       await nftContract.connect(operator).safeMint(user1.address, 1, "ipfs://token1");
       expect(await nftContract.ownerOf(1)).to.equal(user1.address);
@@ -66,6 +65,11 @@ describe("PhoenixNFTs", function () {
       for (let i = 0; i < tokenIds.length; i++) {
         expect(await nftContract.ownerOf(tokenIds[i])).to.equal(user1.address);
       }
+    });
+    it("should fail if caller is not owner", async () => {
+      await expect(
+        nftContract.connect(user1).batchMint(user1.address, [2], ["uri://2"])
+      ).to.be.revertedWithCustomError(nftContract, "AccessControlUnauthorizedAccount").withArgs(user1.address, await nftContract.PANINI_NFT_OPERATOR());
     });
 
     it("should fail if tokenIds and uris lengths mismatch", async () => {
@@ -109,9 +113,15 @@ describe("PhoenixNFTs", function () {
       await expect(nftContract.connect(user1).pause()).to.be.reverted;
       await nftContract.pause();
       expect(await nftContract.paused()).to.be.true;
-
       await nftContract.unpause();
       expect(await nftContract.paused()).to.be.false;
+    });
+
+    it("should prevent mint when paused", async () => {
+      await nftContract.pause();
+      await expect(
+        nftContract.safeMint(user1.address, 1, "uri://test")     
+      ).to.be.revertedWithCustomError(nftContract, "EnforcedPause");
     });
 
     it("should prevent transfer when paused", async () => {
@@ -119,13 +129,22 @@ describe("PhoenixNFTs", function () {
       await nftContract.pause();
       await expect(
         nftContract.connect(user1).transferFrom(user1.address, user2.address, 1)
-      ).to.be.reverted;
+      ).to.be.revertedWithCustomError(nftContract, "EnforcedPause");
+    });
+
+    it("should prevent burn when paused", async () => {
+      await nftContract.safeMint(user1.address, 1, "uri://test");
+      await nftContract.pause();
+      await nftContract.updateBurn(true)
+      await expect(
+        nftContract.connect(user1).burn(1)
+      ).to.be.revertedWithCustomError(nftContract, "EnforcedPause");
     });
   });
 
   describe("Burn", () => {
 
-    it("should through error as burn permissions not given", async () => {
+    it("should throw error as burn permissions not given", async () => {
       await nftContract.connect(operator).safeMint(user1.address, 5, "ipfs://burn");
       await expect(nftContract.connect(user1).burn(5)).to.be.reverted;
     });
@@ -179,10 +198,14 @@ describe("PhoenixNFTs", function () {
         ethers.toUtf8Bytes("WHITELISTED_MARKETPLACE")
       );
       await  nftContract.connect(owner).grantRole(WHITELISTED_MARKETPLACE, user1.address)
-
       await nftContract.connect(owner).setApprovalForAll(user1.address, true)
-
       expect(await nftContract.isApprovedForAll(owner.address, user1.address)).to.be.true;
+    });
+
+    it("shouldn't allow invalid operator approval", async () => {
+      expect( nftContract.connect(owner).setApprovalForAll(user1.address, true)
+      ).to.be.revertedWithCustomError(nftContract, 'InvalidOperator')
+      .withArgs("Operator/Marketplace is not whitelisted")   
     });
   });
 
@@ -191,6 +214,18 @@ describe("PhoenixNFTs", function () {
       await nftContract.connect(operator).safeMint(user1.address, 7, "ipfs://olduri");
       await nftContract.updateTokenURI(7, "ipfs://newuri");
       expect(await nftContract.tokenURI(7)).to.equal("ipfs://newuri");
+    });
+    it("shouldn't update token URI by token owner", async () => {
+      await nftContract.connect(operator).safeMint(user1.address, 7, "ipfs://olduri");
+      expect(nftContract.connect(user1).updateTokenURI(7, "ipfs://newuri")
+      ).to.be.revertedWithCustomError(nftContract,"AccessControlUnauthorizedAccount")
+      .withArgs(user1.address, await nftContract.PANINI_NFT_OPERATOR());
+    });
+    it("shouldn't update token URI other than operator", async () => {
+      await nftContract.connect(operator).safeMint(user1.address, 7, "ipfs://olduri");
+      expect(nftContract.connect(user2).updateTokenURI(7, "ipfs://newuri")
+      ).to.be.revertedWithCustomError(nftContract,"AccessControlUnauthorizedAccount")
+      .withArgs(user1.address, await nftContract.PANINI_NFT_OPERATOR());
     });
   });
 
@@ -219,6 +254,81 @@ describe("PhoenixNFTs", function () {
       expect(await nftContract.ownerOf(10)).to.equal(user1.address);
     });
 
+    it("should revert if tokenIds length and tokenURIs length mismatched", async () => {
+      const tokenIds = [12,13];
+      const tokenURIs = ["ipfs://sig3"];
+      const nonce = 5678;
+      const expiredAt = Math.floor(Date.now() / 1000) + 1000;
+      const chainId = (await ethers.provider.getNetwork()).chainId;
+
+      const msg = [
+        chainId,
+        user1.address,
+        tokenIds,
+        tokenURIs,
+        nonce,
+        expiredAt,
+      ];
+      const signature = await signMessageMintOrUnlock(operator, msg);
+
+      
+      await expect(
+        nftContract.connect(user1).batchMintOrUnlock(tokenIds, tokenURIs, nonce, expiredAt, signature)
+      ).to.be.revertedWith("Input array lengths mismatch");
+    });
+
+    it("should revert if tokenIds length and tokenURIs length is greater than 25", async () => {
+      const tokenIds:any = [];
+      const tokenURIs:any = [];
+      for(var i= 0; i< 26;i++){
+        tokenIds.push(i+1);
+        tokenURIs.push("https://example.co.in")
+      }
+      
+      const nonce = 5678;
+      const expiredAt = Math.floor(Date.now() / 1000) + 1000;
+      const chainId = (await ethers.provider.getNetwork()).chainId;
+
+      const msg = [
+        chainId,
+        user1.address,
+        tokenIds,
+        tokenURIs,
+        nonce,
+        expiredAt,
+      ];
+      const signature = await signMessageMintOrUnlock(operator, msg);
+
+      
+      await expect(
+        nftContract.connect(user1).batchMintOrUnlock(tokenIds, tokenURIs, nonce, expiredAt, signature)
+      ).to.be.revertedWith("Input array length can't be greater than 25");
+    });
+
+    it("should revert if signature is expired ", async () => {
+      const tokenIds = [ 1,2];
+      const tokenURIs = ["https://example.co.in", "https://example.co.in"];
+      
+      
+      const nonce = 5678;
+      const expiredAt = Math.floor(Date.now() / 1000) - 100;
+      const chainId = (await ethers.provider.getNetwork()).chainId;
+
+      const msg = [
+        chainId,
+        user1.address,
+        tokenIds,
+        tokenURIs,
+        nonce,
+        expiredAt,
+      ];
+      const signature = await signMessageMintOrUnlock(operator, msg);
+
+
+      await expect(
+        nftContract.connect(user1).batchMintOrUnlock(tokenIds, tokenURIs, nonce, expiredAt, signature)
+      ).to.be.revertedWith("Signature expired");
+    });
     it("should not reuse a nonce", async () => {
       const tokenIds = [12];
       const tokenURIs = ["ipfs://sig3"];
@@ -281,7 +391,7 @@ describe("PhoenixNFTs", function () {
 
   describe("BatchLock NFT", () => {
     
-    it("should batch mint with valid signature", async () => {
+    it("should batch lock with valid signature", async () => {
       const tokenIds = [10];
       const nonce = 1234;
       const expiredAt = Math.floor(Date.now() / 1000) + 1000;
@@ -298,6 +408,71 @@ describe("PhoenixNFTs", function () {
       const signature = await signMessage(operator, msg);
       await nftContract.connect(operator).batchLockNFT(tokenIds, nonce, expiredAt, signature);
       expect(await nftContract.ownerOf(10)).to.equal(nftContract.target);
+    });
+
+    it("should batch lock with invalid signature", async () => {
+      const tokenIds = [10];
+      const nonce = 1234;
+      const expiredAt = Math.floor(Date.now() / 1000) + 1000;
+      const chainId = (await ethers.provider.getNetwork()).chainId;
+      await nftContract.connect(operator).safeMint(operator.address, 10, "https:://ifps,io")
+
+      const msg = [
+        chainId,
+        operator.address,
+        tokenIds,
+        nonce,
+        expiredAt,
+      ];
+      const signature = await signMessage(user1, msg);
+      expect(nftContract.connect(operator).batchLockNFT(tokenIds, nonce, expiredAt, signature)
+      ).to.be.revertedWith("Invalid signature");
+     ;
+    });
+
+    it("should revert if tokenIds length and tokenURIs length mismatched", async () => {
+      const tokenIds = [10, 12];
+      const nonce = 1234;
+      const expiredAt = Math.floor(Date.now() / 1000) + 1000;
+      const chainId = (await ethers.provider.getNetwork()).chainId;
+      await nftContract.connect(operator).safeMint(operator.address, 10, "https:://ifps,io")
+
+      const msg = [
+        chainId,
+        operator.address,
+        tokenIds,
+        nonce,
+        expiredAt,
+      ];
+      const signature = await signMessage(operator, msg);
+      expect(nftContract.connect(operator).batchLockNFT(tokenIds, nonce, expiredAt, signature)
+      ).to.be.revertedWith("Input array lengths mismatch");
+     ;
+    });
+
+    it("should revert if tokenIds length and tokenURIs length is greater than 25", async () => {
+      const tokenIds:any = [];
+      const tokenURIs:any = [];
+      for(var i= 0; i< 26;i++){
+        tokenIds.push(i+1);
+        tokenURIs.push("example.in")
+      }
+      const nonce = 1234;
+      const expiredAt = Math.floor(Date.now() / 1000) + 1000;
+      const chainId = (await ethers.provider.getNetwork()).chainId;
+      await nftContract.connect(operator).safeMint(operator.address, 100, "https:://ifps,io")
+      await nftContract.connect(operator).batchMint(operator.address, tokenIds, tokenURIs)
+      const msg = [
+        chainId,
+        operator.address,
+        [100, ...tokenIds],
+        nonce,
+        expiredAt,
+      ];
+      const signature = await signMessage(operator, msg);
+      expect(nftContract.connect(operator).batchLockNFT([100, ...tokenIds], nonce, expiredAt, signature)
+      ).to.be.revertedWith("Input array length can't be greater than 25");
+     
     });
 
     it("should not reuse a nonce", async () => {
@@ -322,6 +497,7 @@ describe("PhoenixNFTs", function () {
         nftContract.connect(user1).batchMintOrUnlock(tokenIds, tokenURIs, nonce, expiredAt, signature)
       ).to.be.revertedWith("Nonce already used");
     });
+
   });
 
   describe("Approve NFT", () => {
@@ -329,10 +505,29 @@ describe("PhoenixNFTs", function () {
       const WHITELISTED_MARKETPLACE = ethers.keccak256(
         ethers.toUtf8Bytes("WHITELISTED_MARKETPLACE")
       );
-      
       await nftContract.connect(operator).safeMint(operator.address, 7, "ipfs://olduri");
       await nftContract.connect(owner).grantRole(WHITELISTED_MARKETPLACE, user1.address);
       await nftContract.connect(operator).approve(user1.address, 7);
+    });
+
+    it("should revert token approval other than operator", async () => {
+      const WHITELISTED_MARKETPLACE = ethers.keccak256(
+        ethers.toUtf8Bytes("WHITELISTED_MARKETPLACE")
+      );
+      await nftContract.connect(operator).safeMint(operator.address, 7, "ipfs://olduri");
+      await nftContract.connect(owner).grantRole(WHITELISTED_MARKETPLACE, user1.address);
+      expect(nftContract.connect(user1).approve(user1.address, 7)
+      ).to.be.revertedWithCustomError(nftContract, 'ERC721InvalidApprover')
+      .withArgs(user1.address);
+    });
+
+    it("shouldn't approve token transfer by when it is not whitelisted marketplace", async () => {
+      
+      await nftContract.connect(operator).safeMint(operator.address, 7, "ipfs://olduri");
+      
+      expect(nftContract.connect(operator).approve(user1.address, 7)
+      ).to.be.revertedWithCustomError(nftContract, 'InvalidOperator')
+      .withArgs("Operator/Marketplace is not whitelisted") ;
     });
   });
 
@@ -357,7 +552,7 @@ describe("PhoenixNFTs", function () {
       expect(newOwner).to.equal(user2.address);
       
     })
-    it("should transfer nft from source to destination", async () => {
+    it("should transfer nft from source to destination with data", async () => {
       const PANINI_NFT_OPERATOR = await nftContract.PANINI_NFT_OPERATOR();
       const WHITELISTED_MARKETPLACE = await nftContract.WHITELISTED_MARKETPLACE();
       await nftContract.grantRole(PANINI_NFT_OPERATOR, owner.address);
@@ -375,6 +570,41 @@ describe("PhoenixNFTs", function () {
       // Check ownership
       const newOwner = await nftContract.ownerOf(tokenId);
       expect(newOwner).to.equal(user2.address);
+      
+    })
+    it("should revert if non approved address transfer nft from source to destination", async () => {
+      const PANINI_NFT_OPERATOR = await nftContract.PANINI_NFT_OPERATOR();
+      const WHITELISTED_MARKETPLACE = await nftContract.WHITELISTED_MARKETPLACE();
+      await nftContract.grantRole(PANINI_NFT_OPERATOR, owner.address);
+      const tokenId = 1;
+      // Mint to addr1
+      await nftContract.safeMint(user1.address, tokenId, "ipfs://somehash");
+      await nftContract.grantRole(WHITELISTED_MARKETPLACE, user2.address);
+
+      // addr1 approves addr2 to transfer token
+      await nftContract.connect(user1).approve(user2.address, tokenId);
+
+      // addr2 does transferFrom
+      expect(nftContract.connect(operator)["safeTransferFrom(address,address,uint256)"](user1.address, user2.address, tokenId)
+      ).to.be.revertedWithCustomError(nftContract,'ERC721InvalidApprover');
+      
+    })
+    it("should revert if approved address transfer some other nft rather than approved from source to destination", async () => {
+      const PANINI_NFT_OPERATOR = await nftContract.PANINI_NFT_OPERATOR();
+      const WHITELISTED_MARKETPLACE = await nftContract.WHITELISTED_MARKETPLACE();
+      await nftContract.grantRole(PANINI_NFT_OPERATOR, owner.address);
+      const tokenId = 1;
+      // Mint to addr1
+      await nftContract.safeMint(user1.address, tokenId, "ipfs://somehash");
+      await nftContract.grantRole(WHITELISTED_MARKETPLACE, user2.address);
+
+      // addr1 approves addr2 to transfer token
+      await nftContract.connect(user1).approve(user2.address, tokenId);
+      // addr2 does transferFrom
+      expect(nftContract.connect(user2)["safeTransferFrom(address,address,uint256)"](user1.address, user2.address, 2)
+      ).to.be.revertedWithCustomError(nftContract, "ERC721NonexistentToken")
+      .withArgs(2)
+      
       
     })
   })
@@ -398,6 +628,25 @@ describe("PhoenixNFTs", function () {
       // Check ownership
       const newOwner = await nftContract.ownerOf(tokenId);
       expect(newOwner).to.equal(user2.address);
+      
+    })
+    it("should not transfer NFT using safeTransferFrom(address,address,uint256) when token id not approved", async () => {
+      const PANINI_NFT_OPERATOR = await nftContract.PANINI_NFT_OPERATOR();
+      const WHITELISTED_MARKETPLACE = await nftContract.WHITELISTED_MARKETPLACE();
+      await nftContract.grantRole(PANINI_NFT_OPERATOR, owner.address);
+      const tokenId = 1;
+      const notApprovedTokenId = 3
+      // Mint to addr1
+      await nftContract.safeMint(user1.address, tokenId, "ipfs://somehash");
+      await nftContract.grantRole(WHITELISTED_MARKETPLACE, user2.address);
+
+      // addr1 approves addr2 to transfer token
+      await nftContract.connect(user1).approve(user2.address, tokenId);
+
+      // addr2 does transferFrom
+      expect( nftContract.connect(user2).transferFrom(user1.address, user2.address, notApprovedTokenId)
+      ).to.be.revertedWithCustomError(nftContract, 'ERC721NonexistentToken').withArgs( notApprovedTokenId);
+
       
     })
 
@@ -428,7 +677,21 @@ describe("PhoenixNFTs", function () {
       const newOwner = await nftContract.ownerOf(tokenId);
       expect(newOwner).to.equal(user2.address);
     })
+
+    it("should not transfer  NFT using safeTransferFrom(address,address,uint256, bytes) when panini lock is true", async () =>{
+      
+      const tokenId = 1;
+      // Mint to addr1
+      await nftContract.safeMint(user1.address, tokenId, "ipfs://somehash");
+
+      // addr1 approves addr2 to transfer token
+      expect( nftContract.connect(user1).approve(user2.address, tokenId)
+      ).to.be.revertedWithCustomError(nftContract, "InvalidOperator")
+      .withArgs("Operator/Marketplace is not whitelisted");
+
+    })
   })
+
   describe("transferOwnerShip", () =>{
     it("should transfer ownership to another address", async () => {
     
@@ -456,10 +719,10 @@ describe("PhoenixNFTs", function () {
       ).to.be.revertedWithCustomError(nftContract,"OwnableUnauthorizedAccount").withArgs(user2.address);
     });
   })
+
   describe('transferToContract', () => { 
     it("should transfer nft from source to destination", async () => {
       const PANINI_NFT_OPERATOR = await nftContract.PANINI_NFT_OPERATOR();
-      const WHITELISTED_MARKETPLACE = await nftContract.WHITELISTED_MARKETPLACE();
       await nftContract.grantRole(PANINI_NFT_OPERATOR, owner.address);
       const tokenId = 1;
       // Mint to addr1
