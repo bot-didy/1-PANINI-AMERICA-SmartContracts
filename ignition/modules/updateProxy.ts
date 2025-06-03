@@ -7,7 +7,7 @@ const UPGRADEABLE_PROXY_CONTRACT_ADDRESS = "0x75332cc11F60D5d0094cF96a8aA84F3012
 // const UPGRADEABLE_PROXY_CONTRACT_ADDRESS = "0x66f6f4bA54539040C24D93eC51Da9a61822FBd4A"
 
 
-const upgradeModule = buildModule("UpgradeModuleP3", (m) => {
+const upgradeModule = buildModule("UpgradeModuleP4", (m) => {
     const proxyAdminOwner = m.getAccount(0);
 
     const nftV2 = m.contract("PhoenixNFTs");
@@ -34,4 +34,5 @@ export default upgradeModule;
 // UpgradeModuleP1#PhoenixNFTs - 0x3dc276fd78CFFc67Adec20d584Fa96A7dc78D15d
 // UpgradeModuleP2#PhoenixNFTs - 0xE6F58506a202031d4eAc64157Bf1C023Ddf655E2
 // UpgradeModuleP3#PhoenixNFTs - 0xAA5d1eEb49A37862a463f777Fe8934A2c6e4E260
+// UpgradeModuleP4#PhoenixNFTs - 0x6e3F5257aa96B92C51Ee966f1aA63865bdDA750e
 // npx hardhat ignition deploy ignition/modules/updateProxy.ts --network sepolia --verify

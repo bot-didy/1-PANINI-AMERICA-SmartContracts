@@ -62,7 +62,7 @@ contract SmartValidator is Initializable, AccessControlUpgradeable {
     }
 
     /// @notice Enable or disable Panini Lock
-    function setPaniniLock(bool _status) public onlyOwner {
+    function setPaniniLock(bool _status) public  {
         paniniLock = _status;
     }
 }

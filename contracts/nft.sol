@@ -74,7 +74,6 @@ contract PhoenixNFTs is
         __ERC721Pausable_init();
         __Ownable_init(initialOwner);
         __Ownable2Step_init();
-        __Ownable2Step_init_unchained();
         __ERC721Burnable_init();
         __ERC2981_init(receiver, feeNumerator);
         __CreatorTokenValidator_init();
@@ -126,7 +125,7 @@ contract PhoenixNFTs is
         returns (address)
     {
         // beforeTokenTransfer hook
-        _beforeTokenTransfer(auth, _ownerOf(tokenId), to, tokenId);
+        // _beforeTokenTransfer(auth, _ownerOf(tokenId), to, tokenId);
 
         // panini validateTransfer hook
         _validateTransfer(auth, _ownerOf(tokenId), to);
@@ -300,7 +299,7 @@ contract PhoenixNFTs is
             } else {
                 require(
                     _ownerOf(tokenIds[i]) == address(this),
-                    "Contract does not own token"
+                    "Escrow Contract does not own token to unlock"
                 );
                 _safeTransfer(address(this), _msgSender(), tokenIds[i]);
             }
@@ -372,6 +371,7 @@ contract PhoenixNFTs is
         uint256 tokenId,
         string memory _tokenURI
     ) public virtual onlyRole(PANINI_NFT_OPERATOR) {
+        require(_exists(tokenId), "Token ID does not exists");
         _setTokenURI(tokenId, _tokenURI);
         emit MetadataUpdate(tokenId);
     }
@@ -397,4 +397,14 @@ contract PhoenixNFTs is
         }
         return result;
     }
+
+    function grantRole(bytes32 role, address account) public virtual override onlyOwner {
+        super.grantRole(role, account);
+    }
+
+    function revokeRole(bytes32 role,address account) public virtual override onlyOwner {
+        super.revokeRole(role, account);
+    }
+
+
 }

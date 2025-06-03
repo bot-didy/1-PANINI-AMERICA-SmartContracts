@@ -8,8 +8,6 @@ import {ContextUpgradeable} from "../utils/ContextUpgradeable.sol";
 import {ERC165Upgradeable} from "../utils/introspection/ERC165Upgradeable.sol";
 import {Initializable} from "../proxy/utils/Initializable.sol";
 
-import {Ownable2StepUpgradeable} from "./Ownable2StepUpgradeable.sol";
-
 /**
  * NOTE: Updated exising AccessControlUpgradeable code slighty as we are using
  * OwnerShip, removed Admin role due to redundancy and all admin actions can be done owner.
@@ -45,8 +43,7 @@ abstract contract AccessControlUpgradeable is
     Initializable,
     ContextUpgradeable,
     IAccessControl,
-    ERC165Upgradeable,
-    Ownable2StepUpgradeable
+    ERC165Upgradeable
 {
     struct RoleData {
         mapping(address account => bool) hasRole;
@@ -136,7 +133,7 @@ abstract contract AccessControlUpgradeable is
      *
      * May emit a {RoleGranted} event.
      */
-    function grantRole(bytes32 role, address account) public virtual onlyOwner {
+    function grantRole(bytes32 role, address account) public virtual  {
         _grantRole(role, account);
     }
 
@@ -154,7 +151,7 @@ abstract contract AccessControlUpgradeable is
     function revokeRole(
         bytes32 role,
         address account
-    ) public virtual onlyOwner {
+    ) public virtual  {
         _revokeRole(role, account);
     }
 
