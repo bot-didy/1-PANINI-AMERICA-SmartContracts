@@ -14,9 +14,11 @@ import {SmartValidator} from "./smartlocks/SmartValidator.sol";
 import {CreatorTokenValidator} from "./limitbreak/CreatorTokenValidator.sol";
 import {VerifyByteSignature} from "./openzeppelin/contracts/utils/VerifyByteSignature.sol";
 
-/// @title PhoenixNFTs - An upgradeable ERC721 contract with extended features like pausing, burning, royalties, role-based access, and signature-based minting/unlocking
-/// @notice This contract allows controlled minting, locking, and unlocking of NFTs using off-chain signatures with replay protection
-/// @dev Inherits from multiple OpenZeppelin upgradeable extensions and includes custom signature validation
+/**
+ * @title PhoenixNFTs - An upgradeable ERC721 contract with extended features like pausing, burning, royalties, role-based access, and signature-based minting/unlocking
+ * @notice This contract allows controlled minting, locking, and unlocking of NFTs using off-chain signatures with replay protection
+ * @dev Inherits from multiple OpenZeppelin upgradeable extensions and includes custom signature validation
+ */
 contract PhoenixNFTs is
     Initializable,
     ERC721Upgradeable,
@@ -31,38 +33,50 @@ contract PhoenixNFTs is
     SmartValidator,
     CreatorTokenValidator
 {
-    /// @notice Role identifier for operators allowed to mint and manage NFTs
+    /** @notice Role identifier for operators allowed to mint and manage NFTs */
     bytes32 public constant PANINI_NFT_OPERATOR =
         keccak256("PANINI_NFT_OPERATOR");
-    /// @notice Tracks used nonces to prevent signature replay attacks
+    /** @notice Tracks used nonces to prevent signature replay attacks */
     mapping(uint256 => bool) public usedNonces;
-    /// @notice Tracks token IDs that have been burned to prevent reuse
+    /** @notice Tracks token IDs that have been burned to prevent reuse */
     mapping(uint256 => bool) public burnedTokenIds;
-    /// @notice Toggle to control whether token burning is enabled
+    /** @notice Toggle to control whether token burning is enabled */
     bool public isBurnEnabled;
-    /// @notice A lightweight struct used in view-only methods to return token ownership
+    /** @notice A lightweight struct used in view-only methods to return token ownership */
     struct TokenOwner {
         uint256 tokenId;
         address owner;
     }
-    /// @notice Emitted when tokens are minted or unlocked via signature-based request
+    /**
+     * @notice Emitted when tokens are minted or unlocked via signature-based request
+     * @param requestNonce The nonce used to prevent replay
+     * @param owner The owner who received the tokens
+     * @param tokenIds The list of token IDs affected
+     */
     event NFTBatchMintedOrUnlocked(
         uint256 indexed requestNonce,
         address indexed owner,
         uint256[] tokenIds
     );
 
-    // @notice Emitted when tokens are locked for bridging via signature-based request
+    /**
+     * @notice Emitted when tokens are locked for bridging via signature-based request
+     * @param requestNonce The nonce used to prevent replay
+     * @param owner The owner who locked the tokens
+     * @param tokenIds The list of token IDs locked
+     */
     event NFTBatchLocked(
         uint256 indexed requestNonce,
         address indexed owner,
         uint256[] tokenIds
     );
 
-    /// @notice Initializes the NFT contract with royalty and access control
-    /// @param initialOwner Address to be assigned as the initial contract owner
-    /// @param receiver Address to receive royalty fees
-    /// @param feeNumerator Royalty fee (basis points format, e.g., 500 = 5%)
+    /**
+     * @notice Initializes the NFT contract with royalty and access control
+     * @param initialOwner Address to be assigned as the initial contract owner
+     * @param receiver Address to receive royalty fees
+     * @param feeNumerator Royalty fee (basis points format, e.g., 500 = 5%)
+     */
     function initialize(
         address initialOwner,
         address receiver,
@@ -81,21 +95,23 @@ contract PhoenixNFTs is
         _grantRole(PANINI_NFT_OPERATOR, initialOwner);
     }
 
-    /// @notice Pauses all token transfers
+    /** @notice Pauses all token transfers */
     function pause() public onlyOwner {
         _pause();
     }
 
-    /// @notice Unpauses all token transfers
+    /** @notice Unpauses all token transfers */
     function unpause() public onlyOwner {
         _unpause();
     }
 
-    /// @notice Mints a new NFT
-    /// @param to The address that will own the minted token
-    /// @param tokenId The ID of the token to be minted
-    /// @param uri Metadata URI associated with the token
-    /// @dev can only called by PANINI_NFT_OPERATOR
+    /**
+     * @notice Mints a new NFT
+     * @param to The address that will own the minted token
+     * @param tokenId The ID of the token to be minted
+     * @param uri Metadata URI associated with the token
+     * @dev Can only be called by PANINI_NFT_OPERATOR
+     */
     function safeMint(
         address to,
         uint256 tokenId,
@@ -109,8 +125,10 @@ contract PhoenixNFTs is
         _setTokenURI(tokenId, uri);
     }
 
-    // The following functions are overrides required by Solidity.
-    /// @inheritdoc ERC721Upgradeable
+    /**
+     * @notice Updates the token ownership and validates transfer using panini rules.
+     * @inheritdoc ERC721Upgradeable
+     */
     function _update(
         address to,
         uint256 tokenId,
@@ -133,7 +151,10 @@ contract PhoenixNFTs is
         return super._update(to, tokenId, auth);
     }
 
-    /// @inheritdoc ERC721Upgradeable
+    /**
+     * @notice Increases the token balance of an account.
+     * @inheritdoc ERC721Upgradeable
+     */
     function _increaseBalance(
         address account,
         uint128 value
@@ -157,7 +178,12 @@ contract PhoenixNFTs is
         return super.tokenURI(tokenId);
     }
 
-    /// @inheritdoc ERC721Upgradeable
+    /**
+     * @notice Checks which interfaces the contract supports.
+     * @param interfaceId The interface identifier.
+     * @return True if the interface is supported.
+     * @inheritdoc ERC721Upgradeable
+     */
     function supportsInterface(
         bytes4 interfaceId
     )
@@ -175,11 +201,13 @@ contract PhoenixNFTs is
         return super.supportsInterface(interfaceId);
     }
 
-    /// @notice Batch mints multiple NFTs to a single address
-    /// @param to Recipient address
-    /// @param tokenIds Array of token IDs to mint
-    /// @param uris Array of metadata URIs for each token
-    /// @dev can only called by the PANINI_NFT_OPERATOR
+    /**
+     * @notice Batch mints multiple NFTs to a single address.
+     * @param to Recipient address.
+     * @param tokenIds Array of token IDs to mint.
+     * @param uris Array of metadata URIs for each token.
+     * @dev Only callable by the PANINI_NFT_OPERATOR.
+     */
     function batchMint(
         address to,
         uint256[] memory tokenIds,
@@ -202,9 +230,9 @@ contract PhoenixNFTs is
     }
 
     /**
-     * @notice Validates the operator before setting approval.
+     * @notice Validates the operator before setting approval for all.
+     * @inheritdoc ERC721Upgradeable
      */
-    /// @inheritdoc ERC721Upgradeable
     function setApprovalForAll(
         address operator,
         bool approved
@@ -214,10 +242,9 @@ contract PhoenixNFTs is
     }
 
     /**
-     * @notice Validates the operator before setting approval.
-     * add extra check for operator
+     * @notice Validates the operator before setting approval for a specific token.
+     * @inheritdoc ERC721Upgradeable
      */
-    /// @inheritdoc ERC721Upgradeable
     function approve(
         address operator,
         uint256 tokenId
@@ -227,10 +254,10 @@ contract PhoenixNFTs is
     }
 
     /**
-     * @notice See {IERC721-isApprovedForAll}.
-     * add extra check for operator
+     * @notice Checks if the operator is approved for all tokens owned by the owner.
+     * @dev Adds an extra validation for operator before delegating to super implementation.
+     * @inheritdoc ERC721Upgradeable
      */
-    /// @inheritdoc ERC721Upgradeable
     function isApprovedForAll(
         address owner,
         address operator
@@ -239,9 +266,11 @@ contract PhoenixNFTs is
         return super.isApprovedForAll(owner, operator);
     }
 
-    /// @notice Burns the specified NFT
-    /// @param tokenId Token ID to burn
-    /// @dev Can only be called by the token owner and when burn is enabled
+    /**
+     * @notice Burns the specified NFT.
+     * @param tokenId Token ID to burn.
+     * @dev Only the token owner can burn their NFT, and only when burning is enabled.
+     */
     function burn(uint256 tokenId) public virtual override {
         require(isBurnEnabled, "Burning NFT is not enabled");
         require(_ownerOf(tokenId) == _msgSender(), "Only token owner can burn");
@@ -251,12 +280,13 @@ contract PhoenixNFTs is
     }
 
     /**
-     * @dev Mints or unlocks a batch of NFTs based on a valid signature.
+     * @notice Batch mints or unlocks NFTs using a valid signature.
      * @param tokenIds The token IDs to mint/unlock.
-     * @param tokenURIs The metadata URIs of the tokens.
-     * @param requestNonce The unique nonce for this request.
-     * @param expiredAt The unique nonce for this request.
-     * @param signature The signature verifying the request.
+     * @param tokenURIs Metadata URIs of the tokens.
+     * @param requestNonce A unique nonce for the request.
+     * @param expiredAt Expiry timestamp of the signature.
+     * @param signature Signature authorizing the request.
+     * @dev Prevents replay attacks using nonce and validates signature.
      */
     function batchMintOrUnlock(
         uint256[] calldata tokenIds,
@@ -309,11 +339,12 @@ contract PhoenixNFTs is
     }
 
     /**
-     * @dev Locks a batch of NFTs to bridge them to another network.
+     * @notice Locks NFTs to bridge them to another network.
      * @param tokenIds The token IDs to lock.
-     * @param requestNonce The unique nonce for this request.
-     * @param expiredAt The unique nonce for this request.
-     * @param signature The signature verifying the request.
+     * @param requestNonce A unique nonce for the request.
+     * @param expiredAt Expiry timestamp of the signature.
+     * @param signature Signature authorizing the request.
+     * @dev Transfers ownership to the contract temporarily as an escrow mechanism.
      */
     function batchLockNFT(
         uint256[] calldata tokenIds,
@@ -345,10 +376,10 @@ contract PhoenixNFTs is
     }
 
     /**
-     * @dev Verifies a signature.
-     * @param message The encoded message.
-     * @param signature The signature to verify.
-     * @return True if valid, otherwise false.
+     * @notice Verifies that a given signature is valid and signed by an operator.
+     * @param message The encoded message to verify.
+     * @param signature Signature bytes to verify.
+     * @return True if the signature is valid, otherwise false.
      */
     function _verifySignature(
         bytes memory message,
@@ -358,14 +389,20 @@ contract PhoenixNFTs is
         return hasRole(PANINI_NFT_OPERATOR, signer);
     }
 
+    /**
+     * @notice Checks whether a nonce has already been used.
+     * @param _requestNonce The nonce to check.
+     * @return True if nonce was already used, otherwise false.
+     */
     function isNonceUsed(uint256 _requestNonce) public view returns (bool) {
         return usedNonces[_requestNonce];
     }
 
     /**
-     * @dev Sets `_tokenURI` as the tokenURI of `tokenId`.
-     * Emits {MetadataUpdate}.
-     * this function will be used in extreme sceanarios
+     * @notice Force-updates the token URI for a specific token.
+     * @param tokenId The token ID to update.
+     * @param _tokenURI The new token URI.
+     * @dev Can only be called by PANINI_NFT_OPERATOR. Intended for rare metadata corrections.
      */
     function updateTokenURI(
         uint256 tokenId,
@@ -376,14 +413,20 @@ contract PhoenixNFTs is
         emit MetadataUpdate(tokenId);
     }
 
-    /// @notice enable or disable isBurnEnabled
+    /**
+     * @notice Enables or disables burning functionality.
+     * @param _status True to enable burn, false to disable.
+     * @dev Can only be called by PANINI_NFT_OPERATOR.
+     */
     function updateBurn(bool _status) public onlyRole(PANINI_NFT_OPERATOR) {
         isBurnEnabled = _status;
     }
 
-    // @notice Returns the owners of multiple token IDs.
-    // @param tokenIds An array of token IDs to query.
-    // @return result An array of TokenOwner structs containing token IDs and their owners.
+    /**
+     * @notice Returns the owners of multiple token IDs.
+     * @param tokenIds Array of token IDs to query.
+     * @return result Array of TokenOwner structs with token ID and owner address.
+     */
     function ownersOf(
         uint256[] calldata tokenIds
     ) external view returns (TokenOwner[] memory) {
@@ -398,13 +441,29 @@ contract PhoenixNFTs is
         return result;
     }
 
-    function grantRole(bytes32 role, address account) public virtual override onlyOwner {
+    /**
+     * @notice Grants a role to an account.
+     * @param role Role identifier to grant.
+     * @param account Address to which the role is granted.
+     * @dev Only callable by the contract owner.
+     */
+    function grantRole(
+        bytes32 role,
+        address account
+    ) public virtual override onlyOwner {
         super.grantRole(role, account);
     }
 
-    function revokeRole(bytes32 role,address account) public virtual override onlyOwner {
+    /**
+     * @notice Revokes a role from an account.
+     * @param role Role identifier to revoke.
+     * @param account Address from which the role is revoked.
+     * @dev Only callable by the contract owner.
+     */
+    function revokeRole(
+        bytes32 role,
+        address account
+    ) public virtual override onlyOwner {
         super.revokeRole(role, account);
     }
-
-
 }
