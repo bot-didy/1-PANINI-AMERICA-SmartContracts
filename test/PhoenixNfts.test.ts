@@ -53,13 +53,19 @@ describe("PhoenixNFTs", function () {
 
   describe("Minting NFT by Operator", function () {
     it("should mint a token", async () => {
+      await nftContract.connect(operator).updateMintStatus(true);
       await nftContract.connect(operator).safeMint(user1.address, 1, "ipfs://token1");
       expect(await nftContract.ownerOf(1)).to.equal(user1.address);
+    });
+
+    it("should not mint a token", async () => {
+      expect(nftContract.connect(operator).safeMint(user1.address, 1, "ipfs://token1")).to.be.revertedWith("Minting NFT is not enabled");
     });
 
     it("should batch mint tokens", async () => {
       const tokenIds = [2, 3];
       const uris = ["ipfs://token2", "ipfs://token3"];
+      await nftContract.connect(operator).updateMintStatus(true);
       await nftContract.connect(operator).batchMint(user1.address, tokenIds, uris);
 
       for (let i = 0; i < tokenIds.length; i++) {
@@ -67,18 +73,21 @@ describe("PhoenixNFTs", function () {
       }
     });
     it("should fail if caller is not owner", async () => {
+      await nftContract.connect(operator).updateMintStatus(true);
       await expect(
         nftContract.connect(user1).batchMint(user1.address, [2], ["uri://2"])
       ).to.be.revertedWithCustomError(nftContract, "AccessControlUnauthorizedAccount").withArgs(user1.address, await nftContract.PANINI_NFT_OPERATOR());
     });
 
     it("should fail if tokenIds and uris lengths mismatch", async () => {
+      await nftContract.connect(operator).updateMintStatus(true);
       await expect(
         nftContract.batchMint(user1.address, [2, 3], ["uri://2"])
-      ).to.be.revertedWith("Token IDs and URIs length mismatch");
+      ).to.be.revertedWith("Invalid input: length mismatch or too many tokens (max 25)");
     });
 
     it("should fail if tokenId already exists", async () => {
+      await nftContract.connect(operator).updateMintStatus(true);
       await nftContract.safeMint(user1.address, 1, "uri://1");
       await expect(
         nftContract.batchMint(user1.address, [1], ["uri://duplicate"])
@@ -86,8 +95,9 @@ describe("PhoenixNFTs", function () {
     });
 
     it("should fail if tokenId is burned", async () => {
+      await nftContract.connect(operator).updateMintStatus(true);
       await nftContract.safeMint(user1.address, 1, "uri://burned");
-      await nftContract.updateBurn(true);
+      await nftContract.updateBurnStatus(true);
       await nftContract.connect(user1).burn(1);
       await expect(
         nftContract.batchMint(user1.address, [1], ["uri://burned-again"])
@@ -95,6 +105,7 @@ describe("PhoenixNFTs", function () {
     });
 
     it("should fail if recipient is zero address", async () => {
+      await nftContract.connect(operator).updateMintStatus(true);
       await expect(
         nftContract.batchMint(externalEthers.ZeroAddress, [100], ["uri://100"])
       ).to.be.revertedWith("Invalid recipient");
@@ -103,6 +114,7 @@ describe("PhoenixNFTs", function () {
 
   describe("Pausing", () => {
     it("should pause and unpause", async () => {
+      await nftContract.connect(operator).updateMintStatus(true);
       await nftContract.pause();
       await expect(nftContract.connect(operator).safeMint(user1.address, 4, "ipfs://paused")).to.be.reverted; //need to check lock
       await nftContract.unpause();
@@ -118,6 +130,7 @@ describe("PhoenixNFTs", function () {
     });
 
     it("should prevent mint when paused", async () => {
+      await nftContract.connect(operator).updateMintStatus(true);
       await nftContract.pause();
       await expect(
         nftContract.safeMint(user1.address, 1, "uri://test")     
@@ -125,6 +138,7 @@ describe("PhoenixNFTs", function () {
     });
 
     it("should prevent transfer when paused", async () => {
+      await nftContract.connect(operator).updateMintStatus(true);
       await nftContract.safeMint(user1.address, 1, "uri://test");
       await nftContract.pause();
       await expect(
@@ -133,9 +147,10 @@ describe("PhoenixNFTs", function () {
     });
 
     it("should prevent burn when paused", async () => {
+      await nftContract.connect(operator).updateMintStatus(true);
       await nftContract.safeMint(user1.address, 1, "uri://test");
       await nftContract.pause();
-      await nftContract.updateBurn(true)
+      await nftContract.updateBurnStatus(true)
       await expect(
         nftContract.connect(user1).burn(1)
       ).to.be.revertedWithCustomError(nftContract, "EnforcedPause");
@@ -145,6 +160,7 @@ describe("PhoenixNFTs", function () {
   describe("Burn", () => {
 
     it("should throw error as burn permissions not given", async () => {
+      await nftContract.connect(operator).updateMintStatus(true);
       await nftContract.connect(operator).safeMint(user1.address, 5, "ipfs://burn");
       await expect(nftContract.connect(user1).burn(5)).to.be.reverted;
     });
@@ -154,8 +170,9 @@ describe("PhoenixNFTs", function () {
         ethers.toUtf8Bytes("PANINI_NFT_OPERATOR")
       );
       await nftContract.grantRole(PANINI_NFT_OPERATOR, operator.address);
+      await nftContract.connect(operator).updateMintStatus(true);
       await nftContract.connect(operator).safeMint(user1.address, 5, "ipfs://burn");
-      await nftContract.connect(operator).updateBurn(true);
+      await nftContract.connect(operator).updateBurnStatus(true);
       await nftContract.connect(user1).burn(5);
       await expect(nftContract.ownerOf(5)).to.be.reverted;
     });
@@ -165,7 +182,8 @@ describe("PhoenixNFTs", function () {
         ethers.toUtf8Bytes("PANINI_NFT_OPERATOR")
       );
       await nftContract.grantRole(PANINI_NFT_OPERATOR, operator.address);
-      await nftContract.connect(operator).updateBurn(true);
+      await nftContract.connect(operator).updateBurnStatus(true);
+      await nftContract.connect(operator).updateMintStatus(true);
       await nftContract.connect(operator).safeMint(user1.address, 6, "ipfs://failburn");
       await expect(nftContract.connect(user2).burn(6)).to.be.revertedWith("Only token owner can burn");
     });
@@ -211,17 +229,20 @@ describe("PhoenixNFTs", function () {
 
   describe("Token URI", () => {
     it("should update token URI by operator", async () => {
+      await nftContract.connect(operator).updateMintStatus(true);
       await nftContract.connect(operator).safeMint(user1.address, 7, "ipfs://olduri");
       await nftContract.updateTokenURI(7, "ipfs://newuri");
       expect(await nftContract.tokenURI(7)).to.equal("ipfs://newuri");
     });
     it("shouldn't update token URI by token owner", async () => {
+      await nftContract.connect(operator).updateMintStatus(true);
       await nftContract.connect(operator).safeMint(user1.address, 7, "ipfs://olduri");
       expect(nftContract.connect(user1).updateTokenURI(7, "ipfs://newuri")
       ).to.be.revertedWithCustomError(nftContract,"AccessControlUnauthorizedAccount")
       .withArgs(user1.address, await nftContract.PANINI_NFT_OPERATOR());
     });
     it("shouldn't update token URI other than operator", async () => {
+      await nftContract.connect(operator).updateMintStatus(true);
       await nftContract.connect(operator).safeMint(user1.address, 7, "ipfs://olduri");
       expect(nftContract.connect(user2).updateTokenURI(7, "ipfs://newuri")
       ).to.be.revertedWithCustomError(nftContract,"AccessControlUnauthorizedAccount")
@@ -249,6 +270,7 @@ describe("PhoenixNFTs", function () {
         expiredAt,
       ];
       const signature = await signMessageMintOrUnlock(operator, msg);
+      await nftContract.connect(operator).updateMintStatus(true);
 
       await nftContract.connect(user1).batchMintOrUnlock(tokenIds, tokenURIs, nonce, expiredAt, signature);
       expect(await nftContract.ownerOf(10)).to.equal(user1.address);
@@ -270,7 +292,7 @@ describe("PhoenixNFTs", function () {
         expiredAt,
       ];
       const signature = await signMessageMintOrUnlock(operator, msg);
-
+      await nftContract.connect(operator).updateMintStatus(true);
       
       await expect(
         nftContract.connect(user1).batchMintOrUnlock(tokenIds, tokenURIs, nonce, expiredAt, signature)
@@ -299,7 +321,7 @@ describe("PhoenixNFTs", function () {
       ];
       const signature = await signMessageMintOrUnlock(operator, msg);
 
-      
+      await nftContract.connect(operator).updateMintStatus(true);
       await expect(
         nftContract.connect(user1).batchMintOrUnlock(tokenIds, tokenURIs, nonce, expiredAt, signature)
       ).to.be.revertedWith("Input array length can't be greater than 25");
@@ -324,7 +346,7 @@ describe("PhoenixNFTs", function () {
       ];
       const signature = await signMessageMintOrUnlock(operator, msg);
 
-
+      await nftContract.connect(operator).updateMintStatus(true);
       await expect(
         nftContract.connect(user1).batchMintOrUnlock(tokenIds, tokenURIs, nonce, expiredAt, signature)
       ).to.be.revertedWith("Signature expired");
@@ -345,7 +367,7 @@ describe("PhoenixNFTs", function () {
         expiredAt,
       ];
       const signature = await signMessageMintOrUnlock(operator, msg);
-
+      await nftContract.connect(operator).updateMintStatus(true);
       await nftContract.connect(user1).batchMintOrUnlock(tokenIds, tokenURIs, nonce, expiredAt, signature);
       await expect(
         nftContract.connect(user1).batchMintOrUnlock(tokenIds, tokenURIs, nonce, expiredAt, signature)
@@ -369,6 +391,7 @@ describe("PhoenixNFTs", function () {
         mintNonce,
         expiredAt,
       ];
+      await nftContract.connect(operator).updateMintStatus(true);
       const mintSignature = await signMessageMintOrUnlock(operator, mintMessage);
       await nftContract.connect(user1).batchMintOrUnlock(tokenIds, tokenURIs, mintNonce, expiredAt, mintSignature);
       expect(await nftContract.ownerOf(20)).to.equal(user1.address);
@@ -396,6 +419,7 @@ describe("PhoenixNFTs", function () {
       const nonce = 1234;
       const expiredAt = Math.floor(Date.now() / 1000) + 1000;
       const chainId = (await ethers.provider.getNetwork()).chainId;
+      await nftContract.connect(operator).updateMintStatus(true);
       await nftContract.connect(operator).safeMint(operator.address, 10, "https:://ifps,io")
 
       const msg = [
@@ -415,6 +439,7 @@ describe("PhoenixNFTs", function () {
       const nonce = 1234;
       const expiredAt = Math.floor(Date.now() / 1000) + 1000;
       const chainId = (await ethers.provider.getNetwork()).chainId;
+      await nftContract.connect(operator).updateMintStatus(true);
       await nftContract.connect(operator).safeMint(operator.address, 10, "https:://ifps,io")
 
       const msg = [
@@ -435,6 +460,7 @@ describe("PhoenixNFTs", function () {
       const nonce = 1234;
       const expiredAt = Math.floor(Date.now() / 1000) + 1000;
       const chainId = (await ethers.provider.getNetwork()).chainId;
+      await nftContract.connect(operator).updateMintStatus(true);
       await nftContract.connect(operator).safeMint(operator.address, 10, "https:://ifps,io")
 
       const msg = [
@@ -453,13 +479,14 @@ describe("PhoenixNFTs", function () {
     it("should revert if tokenIds length and tokenURIs length is greater than 25", async () => {
       const tokenIds:any = [];
       const tokenURIs:any = [];
-      for(var i= 0; i< 26;i++){
+      for(var i= 0; i< 25;i++){
         tokenIds.push(i+1);
         tokenURIs.push("example.in")
       }
       const nonce = 1234;
       const expiredAt = Math.floor(Date.now() / 1000) + 1000;
       const chainId = (await ethers.provider.getNetwork()).chainId;
+      await nftContract.connect(operator).updateMintStatus(true);
       await nftContract.connect(operator).safeMint(operator.address, 100, "https:://ifps,io")
       await nftContract.connect(operator).batchMint(operator.address, tokenIds, tokenURIs)
       const msg = [
@@ -471,7 +498,7 @@ describe("PhoenixNFTs", function () {
       ];
       const signature = await signMessage(operator, msg);
       expect(nftContract.connect(operator).batchLockNFT([100, ...tokenIds], nonce, expiredAt, signature)
-      ).to.be.revertedWith("Input array length can't be greater than 25");
+      ).to.be.revertedWith("Invalid input: length mismatch or too many tokens (max 25)");
      
     });
 
@@ -491,7 +518,7 @@ describe("PhoenixNFTs", function () {
         expiredAt,
       ];
       const signature = await signMessageMintOrUnlock(operator, msg);
-
+      await nftContract.connect(operator).updateMintStatus(true);
       await nftContract.connect(user1).batchMintOrUnlock(tokenIds, tokenURIs, nonce, expiredAt, signature);
       await expect(
         nftContract.connect(user1).batchMintOrUnlock(tokenIds, tokenURIs, nonce, expiredAt, signature)
@@ -505,6 +532,7 @@ describe("PhoenixNFTs", function () {
       const WHITELISTED_MARKETPLACE = ethers.keccak256(
         ethers.toUtf8Bytes("WHITELISTED_MARKETPLACE")
       );
+      await nftContract.connect(operator).updateMintStatus(true);
       await nftContract.connect(operator).safeMint(operator.address, 7, "ipfs://olduri");
       await nftContract.connect(owner).grantRole(WHITELISTED_MARKETPLACE, user1.address);
       await nftContract.connect(operator).approve(user1.address, 7);
@@ -514,6 +542,7 @@ describe("PhoenixNFTs", function () {
       const WHITELISTED_MARKETPLACE = ethers.keccak256(
         ethers.toUtf8Bytes("WHITELISTED_MARKETPLACE")
       );
+      await nftContract.connect(operator).updateMintStatus(true);
       await nftContract.connect(operator).safeMint(operator.address, 7, "ipfs://olduri");
       await nftContract.connect(owner).grantRole(WHITELISTED_MARKETPLACE, user1.address);
       expect(nftContract.connect(user1).approve(user1.address, 7)
@@ -522,7 +551,7 @@ describe("PhoenixNFTs", function () {
     });
 
     it("shouldn't approve token transfer by when it is not whitelisted marketplace", async () => {
-      
+      await nftContract.connect(operator).updateMintStatus(true);
       await nftContract.connect(operator).safeMint(operator.address, 7, "ipfs://olduri");
       
       expect(nftContract.connect(operator).approve(user1.address, 7)
@@ -537,6 +566,7 @@ describe("PhoenixNFTs", function () {
       const WHITELISTED_MARKETPLACE = await nftContract.WHITELISTED_MARKETPLACE();
       await nftContract.grantRole(PANINI_NFT_OPERATOR, owner.address);
       const tokenId = 1;
+      await nftContract.connect(operator).updateMintStatus(true);
       // Mint to addr1
       await nftContract.safeMint(user1.address, tokenId, "ipfs://somehash");
       await nftContract.grantRole(WHITELISTED_MARKETPLACE, user2.address);
@@ -557,6 +587,7 @@ describe("PhoenixNFTs", function () {
       const WHITELISTED_MARKETPLACE = await nftContract.WHITELISTED_MARKETPLACE();
       await nftContract.grantRole(PANINI_NFT_OPERATOR, owner.address);
       const tokenId = 1;
+      await nftContract.connect(operator).updateMintStatus(true);
       // Mint to addr1
       await nftContract.safeMint(user1.address, tokenId, "ipfs://somehash");
       await nftContract.grantRole(WHITELISTED_MARKETPLACE, user2.address);
@@ -577,6 +608,7 @@ describe("PhoenixNFTs", function () {
       const WHITELISTED_MARKETPLACE = await nftContract.WHITELISTED_MARKETPLACE();
       await nftContract.grantRole(PANINI_NFT_OPERATOR, owner.address);
       const tokenId = 1;
+      await nftContract.connect(operator).updateMintStatus(true);
       // Mint to addr1
       await nftContract.safeMint(user1.address, tokenId, "ipfs://somehash");
       await nftContract.grantRole(WHITELISTED_MARKETPLACE, user2.address);
@@ -594,6 +626,7 @@ describe("PhoenixNFTs", function () {
       const WHITELISTED_MARKETPLACE = await nftContract.WHITELISTED_MARKETPLACE();
       await nftContract.grantRole(PANINI_NFT_OPERATOR, owner.address);
       const tokenId = 1;
+      await nftContract.connect(operator).updateMintStatus(true);
       // Mint to addr1
       await nftContract.safeMint(user1.address, tokenId, "ipfs://somehash");
       await nftContract.grantRole(WHITELISTED_MARKETPLACE, user2.address);
@@ -615,6 +648,7 @@ describe("PhoenixNFTs", function () {
       const WHITELISTED_MARKETPLACE = await nftContract.WHITELISTED_MARKETPLACE();
       await nftContract.grantRole(PANINI_NFT_OPERATOR, owner.address);
       const tokenId = 1;
+      await nftContract.connect(operator).updateMintStatus(true);
       // Mint to addr1
       await nftContract.safeMint(user1.address, tokenId, "ipfs://somehash");
       await nftContract.grantRole(WHITELISTED_MARKETPLACE, user2.address);
@@ -636,6 +670,7 @@ describe("PhoenixNFTs", function () {
       await nftContract.grantRole(PANINI_NFT_OPERATOR, owner.address);
       const tokenId = 1;
       const notApprovedTokenId = 3
+      await nftContract.connect(operator).updateMintStatus(true);
       // Mint to addr1
       await nftContract.safeMint(user1.address, tokenId, "ipfs://somehash");
       await nftContract.grantRole(WHITELISTED_MARKETPLACE, user2.address);
@@ -652,6 +687,7 @@ describe("PhoenixNFTs", function () {
 
     it("should fail if non-approved address tries to transfer", async () => {
       const tokenId = 2;
+      await nftContract.connect(operator).updateMintStatus(true);
       await nftContract.safeMint(user1.address, tokenId, "ipfs://somehash");
       
       await expect(
@@ -664,6 +700,7 @@ describe("PhoenixNFTs", function () {
     it("should transfer NFT using safeTransferFrom(address,address,uint256, bytes)", async () =>{
       await nftContract.setPaniniLock(false);
       const tokenId = 1;
+      await nftContract.connect(operator).updateMintStatus(true);
       // Mint to addr1
       await nftContract.safeMint(user1.address, tokenId, "ipfs://somehash");
 
@@ -681,6 +718,7 @@ describe("PhoenixNFTs", function () {
     it("should not transfer  NFT using safeTransferFrom(address,address,uint256, bytes) when panini lock is true", async () =>{
       
       const tokenId = 1;
+      await nftContract.connect(operator).updateMintStatus(true);
       // Mint to addr1
       await nftContract.safeMint(user1.address, tokenId, "ipfs://somehash");
 
@@ -725,6 +763,7 @@ describe("PhoenixNFTs", function () {
       const PANINI_NFT_OPERATOR = await nftContract.PANINI_NFT_OPERATOR();
       await nftContract.grantRole(PANINI_NFT_OPERATOR, owner.address);
       const tokenId = 1;
+      await nftContract.connect(operator).updateMintStatus(true);
       // Mint to addr1
       await nftContract.safeMint(user1.address, tokenId, "ipfs://somehash");
 
