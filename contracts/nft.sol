@@ -40,6 +40,10 @@ contract PhoenixNFTs is
     mapping(uint256 => bool) public usedNonces;
     /** @notice Tracks token IDs that have been burned to prevent reuse */
     mapping(uint256 => bool) public burnedTokenIds;
+
+    /** @notice Toggle to control whether token Minting is enabled */
+    bool public isMintingEnabled;
+
     /** @notice Toggle to control whether token burning is enabled */
     bool public isBurnEnabled;
     /** @notice A lightweight struct used in view-only methods to return token ownership */
@@ -117,6 +121,7 @@ contract PhoenixNFTs is
         uint256 tokenId,
         string memory uri
     ) public onlyRole(PANINI_NFT_OPERATOR) {
+        require(isBurnEnabled, "Burning NFT is not enabled");
         require(
             !burnedTokenIds[tokenId],
             "Token ID was burned and cannot be reused"
@@ -213,11 +218,13 @@ contract PhoenixNFTs is
         uint256[] memory tokenIds,
         string[] memory uris
     ) external onlyRole(PANINI_NFT_OPERATOR) {
+        require(isBurnEnabled, "Burning NFT is not enabled");
         require(to != address(0), "Invalid recipient");
         require(
-            tokenIds.length == uris.length,
-            "Token IDs and URIs length mismatch"
+            tokenIds.length == uris.length && tokenIds.length <= 25,
+            "Invalid input: length mismatch or too many tokens (max 25)"
         );
+
         for (uint256 i = 0; i < tokenIds.length; i++) {
             require(!_exists(tokenIds[i]), "Token ID already exists");
             require(
@@ -418,7 +425,16 @@ contract PhoenixNFTs is
      * @param _status True to enable burn, false to disable.
      * @dev Can only be called by PANINI_NFT_OPERATOR.
      */
-    function updateBurn(bool _status) public onlyRole(PANINI_NFT_OPERATOR) {
+    function updateMintStatus(bool _status) public onlyRole(PANINI_NFT_OPERATOR) {
+        isMintingEnabled = _status;
+    }
+
+    /**
+     * @notice Enables or disables burning functionality.
+     * @param _status True to enable burn, false to disable.
+     * @dev Can only be called by PANINI_NFT_OPERATOR.
+     */
+    function updateBurnStatus(bool _status) public onlyRole(PANINI_NFT_OPERATOR) {
         isBurnEnabled = _status;
     }
 
