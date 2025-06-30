@@ -121,7 +121,7 @@ contract PhoenixNFTs is
         uint256 tokenId,
         string memory uri
     ) public onlyRole(PANINI_NFT_OPERATOR) {
-        require(isBurnEnabled, "Burning NFT is not enabled");
+        require(isMintingEnabled, "Minting NFT is not enabled");
         require(
             !burnedTokenIds[tokenId],
             "Token ID was burned and cannot be reused"
@@ -218,7 +218,7 @@ contract PhoenixNFTs is
         uint256[] memory tokenIds,
         string[] memory uris
     ) external onlyRole(PANINI_NFT_OPERATOR) {
-        require(isBurnEnabled, "Burning NFT is not enabled");
+        require(isMintingEnabled, "Minting NFT is not enabled");
         require(to != address(0), "Invalid recipient");
         require(
             tokenIds.length == uris.length && tokenIds.length <= 25,
@@ -425,7 +425,9 @@ contract PhoenixNFTs is
      * @param _status True to enable burn, false to disable.
      * @dev Can only be called by PANINI_NFT_OPERATOR.
      */
-    function updateMintStatus(bool _status) public onlyRole(PANINI_NFT_OPERATOR) {
+    function updateMintStatus(
+        bool _status
+    ) public onlyRole(PANINI_NFT_OPERATOR) {
         isMintingEnabled = _status;
     }
 
@@ -434,7 +436,9 @@ contract PhoenixNFTs is
      * @param _status True to enable burn, false to disable.
      * @dev Can only be called by PANINI_NFT_OPERATOR.
      */
-    function updateBurnStatus(bool _status) public onlyRole(PANINI_NFT_OPERATOR) {
+    function updateBurnStatus(
+        bool _status
+    ) public onlyRole(PANINI_NFT_OPERATOR) {
         isBurnEnabled = _status;
     }
 
