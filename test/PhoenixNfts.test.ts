@@ -27,17 +27,17 @@ const signMessageMintOrUnlock = async (wallet:any, message:any) => {
 
 describe("PhoenixNFTs", function () {
   let phoenixNFTs;
-  let owner:any, operator:any, user1:any, user2:any ;
+  let owner:any, operator:any, user1:any, user2:any, manager:any ;
   let nftContract:any;
   const feeNumerator = 500; // 5%
   const name = "SuperSonicNfts";
   const symbol = "SuperSonicNfts";
 
   beforeEach(async () => {
-    [owner, operator, user1, user2] = await ethers.getSigners();
+    [owner, operator, user1, user2, manager] = await ethers.getSigners();
 
     const PhoenixNFTs = await ethers.getContractFactory("PhoenixNFTs");
-    nftContract = await upgrades.deployProxy(PhoenixNFTs, [owner.address, owner.address, feeNumerator]);
+    nftContract = await upgrades.deployProxy(PhoenixNFTs, [owner.address, owner.address, feeNumerator, manager.address]);
     await nftContract.waitForDeployment();
 
     await nftContract.grantRole(await nftContract.PANINI_NFT_OPERATOR(), operator.address);
@@ -113,25 +113,23 @@ describe("PhoenixNFTs", function () {
   });
 
   describe("Pausing", () => {
-    it("should pause and unpause", async () => {
-      await nftContract.connect(operator).updateMintStatus(true);
-      await nftContract.pause();
-      await expect(nftContract.connect(operator).safeMint(user1.address, 4, "ipfs://paused")).to.be.reverted; //need to check lock
-      await nftContract.unpause();
-      await nftContract.connect(operator).safeMint(user1.address, 4, "ipfs://paused");
-    });
-
-    it("should allow only owner to pause/unpause", async () => {
+    it("should allow only manager to pause/unpause", async () => {
       await expect(nftContract.connect(user1).pause()).to.be.reverted;
-      await nftContract.pause();
+      await nftContract.connect(manager).pause();
       expect(await nftContract.paused()).to.be.true;
-      await nftContract.unpause();
+      await nftContract.connect(manager).unpause();
       expect(await nftContract.paused()).to.be.false;
     });
-
+    it("should pause and unpause", async () => {
+      await nftContract.connect(operator).updateMintStatus(true);
+      await nftContract.connect(manager).pause();
+      await expect(nftContract.connect(operator).safeMint(user1.address, 4, "ipfs://paused")).to.be.reverted; //need to check lock
+      await nftContract.connect(manager).unpause();
+      await nftContract.connect(operator).safeMint(user1.address, 4, "ipfs://paused");
+    });
     it("should prevent mint when paused", async () => {
       await nftContract.connect(operator).updateMintStatus(true);
-      await nftContract.pause();
+      await nftContract.connect(manager).pause();
       await expect(
         nftContract.safeMint(user1.address, 1, "uri://test")     
       ).to.be.revertedWithCustomError(nftContract, "EnforcedPause");
@@ -140,7 +138,7 @@ describe("PhoenixNFTs", function () {
     it("should prevent transfer when paused", async () => {
       await nftContract.connect(operator).updateMintStatus(true);
       await nftContract.safeMint(user1.address, 1, "uri://test");
-      await nftContract.pause();
+      await nftContract.connect(manager).pause();
       await expect(
         nftContract.connect(user1).transferFrom(user1.address, user2.address, 1)
       ).to.be.revertedWithCustomError(nftContract, "EnforcedPause");
@@ -149,7 +147,7 @@ describe("PhoenixNFTs", function () {
     it("should prevent burn when paused", async () => {
       await nftContract.connect(operator).updateMintStatus(true);
       await nftContract.safeMint(user1.address, 1, "uri://test");
-      await nftContract.pause();
+      await nftContract.connect(manager).pause();
       await nftContract.updateBurnStatus(true)
       await expect(
         nftContract.connect(user1).burn(1)
@@ -228,10 +226,10 @@ describe("PhoenixNFTs", function () {
   });
 
   describe("Token URI", () => {
-    it("should update token URI by operator", async () => {
+    it("should update token URI by nft manager", async () => {
       await nftContract.connect(operator).updateMintStatus(true);
       await nftContract.connect(operator).safeMint(user1.address, 7, "ipfs://olduri");
-      await nftContract.updateTokenURI(7, "ipfs://newuri");
+      await nftContract.connect(manager).updateTokenURI(7, "ipfs://newuri");
       expect(await nftContract.tokenURI(7)).to.equal("ipfs://newuri");
     });
     it("shouldn't update token URI by token owner", async () => {

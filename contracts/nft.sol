@@ -36,6 +36,8 @@ contract PhoenixNFTs is
     /** @notice Role identifier for operators allowed to mint and manage NFTs */
     bytes32 public constant PANINI_NFT_OPERATOR =
         keccak256("PANINI_NFT_OPERATOR");
+    bytes32 public constant PANINI_NFT_MANAGER =
+        keccak256("PANINI_NFT_MANAGER");
     /** @notice Tracks used nonces to prevent signature replay attacks */
     mapping(uint256 => bool) public usedNonces;
     /** @notice Tracks token IDs that have been burned to prevent reuse */
@@ -84,7 +86,8 @@ contract PhoenixNFTs is
     function initialize(
         address initialOwner,
         address receiver,
-        uint96 feeNumerator
+        uint96 feeNumerator,
+        address nftManager
     ) public initializer {
         __ERC721_init("SuperSonicNfts", "SuperSonicNfts");
         __ERC721Enumerable_init();
@@ -96,16 +99,18 @@ contract PhoenixNFTs is
         __ERC2981_init(receiver, feeNumerator);
         __CreatorTokenValidator_init();
         __SmartValidator_init();
+        _grantRole(PANINI_NFT_MANAGER, nftManager);
+        _grantRole(PANINI_NFT_MANAGER, initialOwner);
         _grantRole(PANINI_NFT_OPERATOR, initialOwner);
     }
 
     /** @notice Pauses all token transfers */
-    function pause() public onlyOwner {
+    function pause() public onlyRole(PANINI_NFT_MANAGER) {
         _pause();
     }
 
     /** @notice Unpauses all token transfers */
-    function unpause() public onlyOwner {
+    function unpause() public onlyRole(PANINI_NFT_MANAGER) {
         _unpause();
     }
 
@@ -409,12 +414,12 @@ contract PhoenixNFTs is
      * @notice Force-updates the token URI for a specific token.
      * @param tokenId The token ID to update.
      * @param _tokenURI The new token URI.
-     * @dev Can only be called by PANINI_NFT_OPERATOR. Intended for rare metadata corrections.
+     * @dev Can only be called by PANINI_NFT_MANAGER. Intended for rare metadata corrections.
      */
     function updateTokenURI(
         uint256 tokenId,
         string memory _tokenURI
-    ) public virtual onlyRole(PANINI_NFT_OPERATOR) {
+    ) public virtual onlyRole(PANINI_NFT_MANAGER) {
         require(_exists(tokenId), "Token ID does not exists");
         _setTokenURI(tokenId, _tokenURI);
         emit MetadataUpdate(tokenId);
