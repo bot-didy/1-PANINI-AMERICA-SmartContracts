@@ -1,10 +1,6 @@
-import { getBytes } from 'ethers';
-import { AbiCoder } from 'ethers';
 const { expect } = require("chai");
 const { ethers, upgrades } = require("hardhat");
 import { ethers as externalEthers } from 'ethers';
-
-import { PhoenixNFTs } from "../typechain-types";
 
 
 const signMessage = async (wallet:any, message:any) => {
@@ -25,8 +21,8 @@ const signMessageMintOrUnlock = async (wallet:any, message:any) => {
   return await wallet.signMessage(ethers.getBytes(hash));
 };
 
-describe("PhoenixNFTs", function () {
-  let phoenixNFTs;
+describe("PaniniNFTs", function () {
+  
   let owner:any, operator:any, user1:any, user2:any, manager:any ;
   let nftContract:any;
   const feeNumerator = 500; // 5%
@@ -36,8 +32,8 @@ describe("PhoenixNFTs", function () {
   beforeEach(async () => {
     [owner, operator, user1, user2, manager] = await ethers.getSigners();
 
-    const PhoenixNFTs = await ethers.getContractFactory("PhoenixNFTs");
-    nftContract = await upgrades.deployProxy(PhoenixNFTs, [owner.address, owner.address, feeNumerator, manager.address]);
+    const PaniniNFTs = await ethers.getContractFactory("PaniniNFTs");
+    nftContract = await upgrades.deployProxy(PaniniNFTs, [owner.address, owner.address, feeNumerator, manager.address]);
     await nftContract.waitForDeployment();
 
     await nftContract.grantRole(await nftContract.PANINI_NFT_OPERATOR(), operator.address);
@@ -187,7 +183,7 @@ describe("PhoenixNFTs", function () {
     });
   });
 
-  describe("PhoenixNFTs - Whitelisting (Role-based Access)", () => {
+  describe("PaniniNFTs - Whitelisting (Role-based Access)", () => {
    
     const PANINI_NFT_OPERATOR = ethers.keccak256(
       ethers.toUtf8Bytes("PANINI_NFT_OPERATOR")

@@ -21,7 +21,7 @@ npx hardhat compile
 
 ### Run Tests
 ```sh
-npx hardhat test test/PhoenixNfts.test.ts
+npx hardhat test test/PaniniNfts.test.ts
 npx hardhat test test/PaniniRoyalty.test.ts
 
 ```

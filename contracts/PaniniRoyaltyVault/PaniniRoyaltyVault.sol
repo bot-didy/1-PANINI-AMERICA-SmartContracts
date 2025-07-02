@@ -9,7 +9,7 @@ import "./openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./uniswap/IUniswapV2Router02.sol";
 
 /**
- * @title PaniniRoyaltyVault
+ * @title PhoenixRoyaltyVault
  * @notice Handles ETH and ERC20 fund management, including withdrawals and swaps using Uniswap.
  * @dev Upgradeable contract with access control, pausing, and whitelist mechanisms.
  */
@@ -148,7 +148,7 @@ contract PaniniRoyaltyVault is
      * @param account Address to update.
      * @param status New whitelist status.
      */
-    function updateReceiverWhitelist(
+    function updateReceiverWhitelistStatus(
         address account,
         bool status
     ) external onlyOwner {
@@ -176,16 +176,11 @@ contract PaniniRoyaltyVault is
      * @notice Approves a token amount for swapping via a router.
      * @param token Address of the ERC20 token.
      * @param amount Amount to approve.
-     * @param routerAddress Address of the router.
      */
-    function approveTokenForSwap(
-        address token,
-        uint256 amount,
-        address routerAddress
-    ) external {
+    function approveTokenForSwap(address token, uint256 amount) external {
         require(vaultManagers[msg.sender], "Not authorized to approve");
         require(amount > 0, "Amount must be greater than zero");
-        IERC20(token).approve(routerAddress, amount);
+        IERC20(token).approve(address(uniswapRouter), amount);
     }
 
     /**

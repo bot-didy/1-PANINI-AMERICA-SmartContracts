@@ -32,7 +32,7 @@ contract SmartValidator is Initializable, AccessControlUpgradeable {
                     !hasRole(WHITELISTED_MARKETPLACE, caller) && caller != from
                 ) {
                     revert InvalidOperator(
-                        "Caller Is Not Owner Or Whitelisted Marketplace  "
+                        "Caller Is Not Owner Or Whitelisted Marketplace"
                     );
                 }
             }
