@@ -1,6 +1,6 @@
-# NFT Smart Contracts
+## Project Overview: Panini NFT Smart Contracts
 
-This project contains the smart contracts for deploying and managing NFTs using Solidity and Hardhat.
+The PaniniNFTs.sol is ERC721C + Centralised Bridge allows secure, signature-based bridging of NFTs from a Private Panini Blockchain (Hyperledger Sawtooth) to Ethereum mainnet ( or in future any EVM blockchain), with enforced royalty & whitelisting controls for marketplaces.
 
 ## 🛠️ Project Setup
 
@@ -21,13 +21,22 @@ npx hardhat compile
 
 ### Run Tests
 ```sh
-npx hardhat test
+npx hardhat test test/PhoenixNfts.test.ts
+npx hardhat test test/PaniniRoyalty.test.ts
+
 ```
 
 ### Deploy Contracts
-Modify `ignition/modules/deploy.ts` and run:
+run to deploy contract :
 ```sh
-npx hardhat ignition deploy ./ignition/modules/deploy.ts --network <your-network>
+npx hardhat ignition deploy ./ignition/modules/deployProxy.ts --network <your-network>
+
+```
+
+### Deploy Contracts
+run to upgrade contract :
+```sh
+npx hardhat ignition deploy ./ignition/modules/upgradeProxy.ts --network <your-network>
 
 ```
 
@@ -36,9 +45,16 @@ npx hardhat ignition deploy ./ignition/modules/deploy.ts --network <your-network
 - [Verifying Guide](https://hardhat.org/hardhat-runner/docs/guides/verifying)
 
 
-## 📜 NFT Contract Overview
-- **`nft.sol`** → is plain NFT contract without whitelisted marketplace enforcement, royalties, and panini lock.
-- **`NFTBridge.sol`** → Handles cross-chain NFT transfers with signature-based minting (yet to add)
+ ## 📜 NFT Contract Overview
+- **`PaniniNFTs.sol`** 
+    → is NFT contract whitelisted marketplace enforcement, royalties enforcement.
+    → Handles cross-chain NFT transfers with signature-based bridging requests.
+
+ ## 📜 RoyaltyVault Contract Overview
+- **`PaniniRoyaltyVault.sol`** 
+    → Its a On-chain Simple Smart Contract Account to receive royalties from whitelisted marketplaces.
+    → VaultManager can swap using uniswap and withdraw funds to whitelistedReceivers.
+
 
 ## 🔗 Useful Resources
 - [Hardhat Docs](https://hardhat.org/docs/)
