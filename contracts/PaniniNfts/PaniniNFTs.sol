@@ -426,6 +426,22 @@ contract PaniniNFTs is
     }
 
     /**
+     * @notice Sets the default royalty information for all tokens.
+     * @dev Only the contract owner can call this function.
+     *      The receiver address cannot be the zero address.
+     *      The fee numerator should follow the fee denominator (default 10000 for basis points).
+     * @param receiver The address that will receive royalty payments.
+     * @param feeNumerator The royalty fee in basis points (parts per 10,000).
+     */
+    function setDefaultRoyalty(
+        address receiver,
+        uint96 feeNumerator
+    ) public virtual onlyOwner {
+        require(receiver != address(0), "Invalid receiver: zero address");
+        _setDefaultRoyalty(receiver, feeNumerator);
+    }
+
+    /**
      * @notice Enables or disables burning functionality.
      * @param _status True to enable burn, false to disable.
      * @dev Can only be called by PANINI_NFT_OPERATOR.

@@ -1,3 +1,4 @@
+import { Address } from './../typechain-types/@openzeppelin/contracts/utils/Address';
 const { expect } = require("chai");
 const { ethers, upgrades } = require("hardhat");
 import { ethers as externalEthers } from 'ethers';
@@ -54,6 +55,14 @@ describe("PaniniNFTs", function () {
       expect(await nftContract.ownerOf(1)).to.equal(user1.address);
     });
 
+    it("should not mint a token when panini nft operator role is revoked", async () => {
+      await nftContract.connect(operator).updateMintStatus(true);
+      await nftContract.connect(operator).safeMint(user1.address, 1, "ipfs://token1");
+      await nftContract.connect(owner).revokeRole(await nftContract.PANINI_NFT_OPERATOR(), operator.address);
+      await expect(nftContract.connect(operator).safeMint(user1.address, 2, "ipfs://token1"))
+      .to.be.revertedWithCustomError(nftContract, 'AccessControlUnauthorizedAccount').withArgs(operator.address, await nftContract.PANINI_NFT_OPERATOR())
+    });
+
     it("should not mint a token", async () => {
       expect(nftContract.connect(operator).safeMint(user1.address, 1, "ipfs://token1")).to.be.revertedWith("Minting NFT is not enabled");
     });
@@ -68,7 +77,14 @@ describe("PaniniNFTs", function () {
         expect(await nftContract.ownerOf(tokenIds[i])).to.equal(user1.address);
       }
     });
-    it("should fail if caller is not owner", async () => {
+    it("should fail if caller is not owner for safeMint", async () => {
+      await nftContract.connect(operator).updateMintStatus(true);
+      await expect(
+        nftContract.connect(user1).safeMint(user1.address, 2, "uri://2")
+      ).to.be.revertedWithCustomError(nftContract, "AccessControlUnauthorizedAccount").withArgs(user1.address, await nftContract.PANINI_NFT_OPERATOR());
+    });
+    
+    it("should fail if caller is not owner for batchmint", async () => {
       await nftContract.connect(operator).updateMintStatus(true);
       await expect(
         nftContract.connect(user1).batchMint(user1.address, [2], ["uri://2"])
@@ -244,9 +260,17 @@ describe("PaniniNFTs", function () {
     });
   });
 
-  describe("Signature-Based Mint/Unlock", () => {
-    
+  describe("setDefaultRoyalty", () => {
+    it("should change the default royalty when called by owner", async () =>{
+      await nftContract.connect(owner).setDefaultRoyalty(user1.address, 5000);
+    })
+    it("should not change the default royalty when called by other than owner", async () =>{
+      await expect(nftContract.connect(user1).setDefaultRoyalty(user1.address, 5000)).to.be.
+      revertedWithCustomError(nftContract,'OwnableUnauthorizedAccount').withArgs(user1.address);
+    })
+  })
 
+  describe("Signature-Based Mint/Unlock", () => {
     it("should batch mint with valid signature", async () => {
       const tokenIds = [10, 11];
       const tokenURIs = ["ipfs://sig1", "ipfs://sig2"];
@@ -428,7 +452,7 @@ describe("PaniniNFTs", function () {
       expect(await nftContract.ownerOf(10)).to.equal(nftContract.target);
     });
 
-    it("should batch lock with invalid signature", async () => {
+    it("should revert batch lock with invalid signature", async () => {
       const tokenIds = [10];
       const nonce = 1234;
       const expiredAt = Math.floor(Date.now() / 1000) + 1000;
@@ -547,7 +571,6 @@ describe("PaniniNFTs", function () {
     it("shouldn't approve token transfer by when it is not whitelisted marketplace", async () => {
       await nftContract.connect(operator).updateMintStatus(true);
       await nftContract.connect(operator).safeMint(operator.address, 7, "ipfs://olduri");
-      
       expect(nftContract.connect(operator).approve(user1.address, 7)
       ).to.be.revertedWithCustomError(nftContract, 'InvalidOperator')
       .withArgs("Operator/Marketplace is not whitelisted") ;
@@ -766,5 +789,19 @@ describe("PaniniNFTs", function () {
       
     })
   })
+
+  describe('grantRole', () => { 
+    it('should grant/revoke role when called Owner', async () => {
+      await nftContract.connect(owner).grantRole(await nftContract.PANINI_NFT_OPERATOR(),user1.address);
+      await nftContract.connect(owner).revokeRole(await nftContract.PANINI_NFT_OPERATOR(),user1.address)
+    })
+    it('should not grant/revoke role when called by other than owner', async () => {
+      await expect(nftContract.connect(user1).grantRole(await nftContract.PANINI_NFT_OPERATOR(),user1.address)).to.be.
+      revertedWithCustomError(nftContract, 'OwnableUnauthorizedAccount').withArgs(user1.address);
+      await expect(nftContract.connect(user1).revokeRole(await nftContract.PANINI_NFT_OPERATOR(),user1.address)).to.be.
+      revertedWithCustomError(nftContract,'OwnableUnauthorizedAccount').withArgs(user1.address);
+    })
+  })
+
 
 });
