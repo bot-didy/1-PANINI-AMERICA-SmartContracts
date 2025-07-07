@@ -1,5 +1,3 @@
-## 🔍 Audit Overview: Panini NFT Bridge
-
 # 1. Panini America NFTs Overview
 
 ## 1.1 Business Context
