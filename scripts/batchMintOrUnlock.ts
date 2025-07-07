@@ -2,10 +2,10 @@ import { ethers } from "ethers";
 import * as PaniniNFTs from "../artifacts/contracts/PaniniNfts/PaniniNFTs.sol/PaniniNFTs.json"
 
 const abiCoder = new ethers.AbiCoder();
-const adminPrivateKey = "0xa38079e6582d10a45d881de68f3944424fd7e1bd1fa43847077616b81805a18b"; 
-const userPrivateKey = "0x97a320ad14872abafc2b764f1278ad83395d0696d76071c7e7bc191ca9d277e0"
+const bridgeSignerPrivateKey = "0xa38009e6582d10a45d881de68f3944424fd7e1bd1fa43847077616b81805a18b"; // replace keys 
+const userPrivateKey = "0x90a320ad14872abafc2b764f1278ad83395d0696d76071c7e7bc191ca9d277e0" // replace keys
 const provider = new ethers.JsonRpcProvider("https://eth-sepolia.g.alchemy.com/v2/IYCRbmkzSXAXDYR98TXonbac6eBMfeSV");
-const admin = new ethers.Wallet(adminPrivateKey, provider);
+const bridgeSigner = new ethers.Wallet(bridgeSignerPrivateKey, provider);
 const signer = new ethers.Wallet(userPrivateKey, provider);
 const chainId = 11155111;
 const contractAddress = "0x6E126923356f1e5Dbcc5314D45076783c053FdaE";
@@ -33,8 +33,8 @@ async function batchMintOrUnlockSignMessage(toAddress: string, tokenIds: Array<N
     // Generate a keccak256 hash of the encoded message
     const messageHash = ethers.keccak256(message);
 
-    // Sign the hashed message using the admin's private key
-    const signature = await admin.signMessage(ethers.getBytes(messageHash));
+    // Sign the hashed message using the bridgeSigner's private key
+    const signature = await bridgeSigner.signMessage(ethers.getBytes(messageHash));
 
     // Log the signed data for transparency and debugging
     console.log("Message Hash:", messageHash);
