@@ -9,7 +9,7 @@ import "./openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./uniswap/IUniswapV2Router02.sol";
 
 /**
- * @title PhoenixRoyaltyVault
+ * @title PaniniRoyaltyVault
  * @notice Handles ETH and ERC20 fund management, including withdrawals and swaps using Uniswap.
  * @dev Upgradeable contract with access control, pausing, and whitelist mechanisms.
  */
