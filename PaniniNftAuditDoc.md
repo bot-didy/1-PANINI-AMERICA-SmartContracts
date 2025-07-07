@@ -293,6 +293,9 @@ npx hardhat test test/PaniniNFTs.test.ts
 
 * **Royalty & Compliance Enforcement**:
   Inherits from ERC721C (LimitBreak) and ERC2981, ensuring royalty rules and operator validation are enforced on-chain.
+  * https://docs.opensea.io/docs/creator-fee-enforcement
+  * https://github.com/limitbreakinc/creator-token-standards
+  * https://apptokens.com/docs/integration-guide/creator-token-standards/v3/for-creators/transfer-security
 
 * **Immutable Burn Logic**:
   Burned token IDs are permanently invalidated and cannot be reused.
@@ -301,7 +304,7 @@ npx hardhat test test/PaniniNFTs.test.ts
 
 * The **bridge oracle** is currently centralized and managed by Panini; future decentralization (e.g., Chainlink-based signing) is under consideration.
 * The NFT **collection is global**, covering all Panini leagues and categories under a unified contract.
-* Bridge logic ensures **NFT exists on only one chain** at any given time.
+* Bridge logic ensures **NFT exists on only one chain** at any given time. The Panini chain and the off-chain bridge oracle are not considered external dependencies in the audit scope. Once an on-chain event on Ethereum succeeds (e.g., NFTBatchLocked, NFTBatchMintedOrUnlocked), the off-chain bridge is assumed to function correctly and act accordingly on the Panini private chain. 
 * The current signature format uses keccak + ECDSA for hashing and signatures.
 * EIP-712 Typed Data Signatures are likely considered for future versions to standardize signature verification across EVM networks.
 

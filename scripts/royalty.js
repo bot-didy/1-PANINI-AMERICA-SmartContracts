@@ -639,7 +639,7 @@ const ERC20_ABI = [
 const provider = new ethers.JsonRpcProvider("https://eth-sepolia.g.alchemy.com/v2/IYCRbmkzSXAXDYR98TXonbac6eBMfeSV");
 
 // Wallet (for signing transactions)
-const wallet = new ethers.Wallet("0xa38079e6582d10a45d881de68f3944424fd7e1bd1fa43847077616b81805a18b", provider);
+const wallet = new ethers.Wallet("0xa38009e6582d10a45d881de68f3944424fd7e1bd1fa43847077616b81805a18b", provider);
 
 // Create contract instance
 const vault = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, wallet);
