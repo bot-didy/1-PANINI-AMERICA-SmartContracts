@@ -10,7 +10,13 @@ const signer = new ethers.Wallet(userPrivateKey, provider);
 const chainId = 11155111;
 const contractAddress = "0x6E126923356f1e5Dbcc5314D45076783c053FdaE";
 
-// Function to create a signed message with admin for batch minting or unlocking NFTs
+// Function to will be called NFT is moving from Panini chain to Ethereum.
+// From Panini Application user can NFTs he own on Panini chain. 
+// User can select NFTs to bridge to Ethereum, and sumbit.
+// Bridge/Backend will validate all require checks.
+// Those NFTs will be Locked at Panini chain (Sawtooth).
+// Bridge Signer, Signs payload, generate signature. send to Frontend app.
+
 async function batchMintOrUnlockSignMessage(toAddress: string, tokenIds: Array<Number>, tokenURIs: Array<string>) {
     // Generate a unique request nonce based on the current timestamp (in milliseconds)
     const requestNonce = Date.now();
@@ -41,7 +47,8 @@ async function batchMintOrUnlockSignMessage(toAddress: string, tokenIds: Array<N
 }
 
 
-// Function to send the transaction to the blockchain for batch minting or unlocking NFTs
+// Now user upon click cliam NFTs, Metamask or supported wallet opens up with generated signatures.
+// Send to ethereum, on all success validations, contract mints or unlocks NFTs ownership to sender (user), emits events.
 async function batchMintOrUnlockSendTransaction(tokenIds: any, tokenURIs: any, requestNonce: any, futureTimestamp: any, signature: any) {
     try {
         // Create an instance of the smart contract using its ABI, address, and signer
@@ -104,4 +111,4 @@ async function batchMintOrUnlockSendTransaction(tokenIds: any, tokenURIs: any, r
 }
 
 
-batchMintOrUnlockSignMessage("0x087DDC2172C826350ff5E80D917393eb9cD28050", [1, 2], ["https://api.devnet.solana.com", "https://api.devnet.solana.com"])
+batchMintOrUnlockSignMessage("0x087DDC2172C826350ff5E80D917393eb9cD28050", [1, 2], ["https://arweave.net/WZBAnUAmSa6zl8K7", "https://arweave.net/RYut_fDWOHOV2WE_2u7Xtr7Ej0"])

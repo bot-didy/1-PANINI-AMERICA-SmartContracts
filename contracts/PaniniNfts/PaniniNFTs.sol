@@ -444,22 +444,22 @@ contract PaniniNFTs is
     /**
      * @notice Enables or disables burning functionality.
      * @param _status True to enable burn, false to disable.
-     * @dev Can only be called by PANINI_NFT_OPERATOR.
+     * @dev Can only be called by onlyOwner.
      */
     function updateMintStatus(
         bool _status
-    ) public onlyRole(PANINI_NFT_OPERATOR) {
+    ) public onlyOwner {
         isMintingEnabled = _status;
     }
 
     /**
      * @notice Enables or disables burning functionality.
      * @param _status True to enable burn, false to disable.
-     * @dev Can only be called by PANINI_NFT_OPERATOR.
+     * @dev Can only be called by onlyOwner.
      */
     function updateBurnStatus(
         bool _status
-    ) public onlyRole(PANINI_NFT_OPERATOR) {
+    ) public onlyOwner {
         isBurnEnabled = _status;
     }
 

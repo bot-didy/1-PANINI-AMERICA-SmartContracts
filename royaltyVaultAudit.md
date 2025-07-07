@@ -1,13 +1,11 @@
-Here’s a professional **audit overview documentation** for the `PaniniRoyaltyVault` smart contract, aligned with audit firm expectations like Hacken:
 
+## Audit Overview: Panini Royalty Vault
 
-## 🔐 Audit Overview: Panini Royalty Vault
-
-### 🏢 Project Background
+### Project Background
 
 Panini’s NFT platform facilitates sports collectibles trading across leagues like NFL, NBA, UFC, and Soccer. The ecosystem includes an NFT bridge, private-to-public chain transfers, and royalty management. This document outlines the vault mechanism designed to **securely hold, manage, and swap** ETH and ERC20 tokens related to royalties and platform fees.
 
-### 📘 Vault Description
+### Vault Description
 
 `PaniniRoyaltyVault.sol` is an **upgradeable**, role-based smart contract that functions as a **secure treasury** for holding royalties and executing swaps. It supports:
 
@@ -20,7 +18,7 @@ Panini’s NFT platform facilitates sports collectibles trading across leagues l
 The vault’s primary purpose is to collect and hold royalty revenues, convert volatile tokens to USDC (or stable tokens), and **only allow pre-approved withdrawals to whitelisted addresses.**
 
 
-### 🔍 Scope for Audit
+### Scope for Audit
 
 * `PaniniRoyaltyVault.sol`
 
@@ -28,7 +26,7 @@ The vault’s primary purpose is to collect and hold royalty revenues, convert v
 
 
 
-### 🧰 Key Features
+### Key Features
 
 | Feature                       | Description                                                                  |
 | ----------------------------- | ---------------------------------------------------------------------------- |
@@ -41,7 +39,7 @@ The vault’s primary purpose is to collect and hold royalty revenues, convert v
 
 
 
-### 👥 Roles & Permissions
+### Roles & Permissions
 
 | Role              | Description                                                 |
 | ----------------- | ----------------------------------------------------------- |
@@ -51,7 +49,7 @@ The vault’s primary purpose is to collect and hold royalty revenues, convert v
 
 ---
 
-### 🏗️ Technical Stack
+### Technical Stack
 
 * **Solidity Version**: `^0.8.28`
 * **Framework**: OpenZeppelin Upgradeable Contracts
@@ -59,7 +57,7 @@ The vault’s primary purpose is to collect and hold royalty revenues, convert v
 
 ---
 
-### 📍 Key Contracts & Components
+### Key Contracts & Components
 
 | Contract                 | Responsibility                                                  |
 | ------------------------ | --------------------------------------------------------------- |
@@ -69,7 +67,7 @@ The vault’s primary purpose is to collect and hold royalty revenues, convert v
 | `PausableUpgradeable`    | Emergency control for critical function halt                    |
 
 
-### 🔁 Functionality Summary
+### Functionality Summary
 
 | Function                                | Description                                                        |
 | --------------------------------------- | ------------------------------------------------------------------ |

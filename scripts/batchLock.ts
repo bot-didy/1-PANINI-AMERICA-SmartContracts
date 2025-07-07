@@ -10,7 +10,14 @@ const signer = new ethers.Wallet(userPrivateKey, provider);
 const chainId = 11155111;
 const contractAddress = "0x6E126923356f1e5Dbcc5314D45076783c053FdaE";
 
-// Function to create and sign a message for batch locking NFTs
+
+// Function to will be called NFT is moving from Ethereum to Panini chain. 
+// Assume Lock at Panini chain (Sawtooth) is done.
+// From Panini Application user can NFTs he own on Ethereum for connected Wallet. 
+// User can select NFTs to bring it back, and sumbit.
+// Bridge/Backend will validate all require checks. 
+// Then, Signs payload, generate signature. send to Frontend app.
+
 async function batchLockSignMessage(toAddress: string, tokenIds: Array<Number>) {
     // Generate a unique request nonce using the current timestamp (milliseconds)
     const requestNonce = Date.now();
@@ -41,8 +48,8 @@ async function batchLockSignMessage(toAddress: string, tokenIds: Array<Number>) 
 }
 
 
-
-// Function to send the batch lock NFTs transaction to the blockchain
+// Now user upon click bridge NFTs to Panini Chain, Metamask or supported wallet opens up with generated signatures.
+// Send to ethereum, on all success validations, contract takes NFTs ownership, emits event for oracle. 
 async function batchLockSendTransaction(tokenIds: any, requestNonce: any, futureTimestamp: any, signature: any) {
     try {
         // Create a new instance of the contract using its address, ABI, and signer
