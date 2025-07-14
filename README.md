@@ -25,6 +25,8 @@ npx hardhat test test/PaniniNfts.test.ts
 npx hardhat test test/PaniniRoyalty.test.ts
 
 ```
+**NOTE** : *While running PaniniNfts test cases locally, please comment out line 156 in PaniniNFTs.sol. This line is related to beforeTokenTransfer and is used for LimitBreak checks. You can safely test the contract on **Sepolia** or **Mainnet** without this line during local testing.*
+
 
 ### Deploy Contracts
 run to deploy contract :

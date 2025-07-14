@@ -1,0 +1,181 @@
+# Panini Royalty Vault
+
+## 1.1 Business Context
+
+Panini America is the premier digital and physical sports collectibles brand, holding exclusive trading card licenses for the NFL, NBA, UFC, and global soccer leagues. As part of its digital collectibles expansion, Panini supports an interoperable NFT platform that bridges assets between a proprietary private blockchain and public EVM-compatible chains.
+
+While NFTs are bridged to Ethereum and traded across public marketplaces, royalty revenue and platform fees generated in ETH and ERC20 tokens must be held securely and managed transparently. This is where the `PaniniRoyaltyVault` contract plays a critical role.
+
+## 1.2 Purpose of This Document
+
+This technical documentation outlines the architecture, behavior, and access model of the `PaniniRoyaltyVault` smart contract, which governs treasury operations such as ETH/ERC20 custody, controlled withdrawals, token swaps via Uniswap V2, and access whitelisting.
+
+---
+
+## 2. Vault Overview
+
+### 2.1 Key Objectives
+
+- Secure ETH/ERC20 Storage  
+- Controlled, role-based withdrawals  
+- Swapping volatile tokens to USDC or stable tokens  
+- Address whitelisting for recipients and managers  
+- Upgradeable contract using OpenZeppelin's Transparent Proxy Pattern  
+- Pausable contract with emergency halting
+
+### 2.2 Smart Contract Highlights
+
+| Feature                  | Description                                                         |
+|--------------------------|---------------------------------------------------------------------|
+| Upgradeable Design       | Built using OpenZeppelin's proxy pattern (Initializable, Ownable)  |
+| Role-Based Access        | Managers and receivers must be explicitly whitelisted by owner     |
+| Token Swap Support       | Swaps ETH or ERC20 via Uniswap V2 Router                           |
+| ETH/ERC20 Withdrawals    | Only whitelisted receivers may receive assets                      |
+| Vault Manager Authorization | Vault managers control swap/withdraw/approve operations         |
+| Pausable                 | Owner can pause/unpause critical functions during emergencies       |
+
+---
+
+## 3. User Roles & Permissions
+
+### Role
+
+| Role                | Capabilities                                                           |
+|---------------------|------------------------------------------------------------------------|
+| Owner (Multisig)    | Initialize, pause/unpause, manage whitelist and managers              |
+| Vault Manager       | Swap tokens, approve ERC20 for Uniswap, withdraw ETH/ERC20            |
+| Whitelisted Address | Designated recipient eligible to receive withdrawals or swap proceeds |
+
+### 3.1 Role Control Matrix
+
+| Function                      | Owner | Vault Manager | Whitelisted Address         |
+|-------------------------------|:-----:|:-------------:|:----------------------------:|
+| initialize()                  | ✅    | ❌            | ❌                           |
+| pause()/unpause()            | ✅    | ❌            | ❌                           |
+| updateVaultManager()         | ✅    | ❌            | ❌                           |
+| updateReceiverWhitelistStatus() | ✅ | ❌            | ❌                           |
+| withdrawETH()                | ❌    | ✅            | ✅ *(as recipient)*          |
+| withdrawERC20()              | ❌    | ✅            | ✅ *(as recipient)*          |
+| approveTokenForSwap()        | ❌    | ✅            | ❌                           |
+| swapEthForToken()            | ❌    | ✅            | ✅ *(as recipient)*          |
+| swapTokenForToken()          | ❌    | ✅            | ✅ *(as recipient)*          |
+
+---
+
+## 4. Technical Stack
+
+### 4.1 Programming Languages & Stack
+
+| Component       | Technology Used                        |
+|-----------------|-----------------------------------------|
+| Smart Contract  | Solidity (v0.8.28)                      |
+| Upgradeability  | OpenZeppelin Upgradeable Proxy Pattern |
+| Token Swaps     | Uniswap V2 Router                       |
+| Permissions     | Role-based via storage mappings        |
+| Scripting       | Hardhat + Ethers + TypeScript (external only) |
+
+---
+
+### 4.2 Deployment Instructions
+
+**Install dependencies:**
+
+```bash
+npm install
+````
+
+**Compile contracts:**
+
+```bash
+npx hardhat compile
+```
+
+**Deploy using upgradeable proxy pattern:**
+
+```bash
+npx hardhat ignition deploy ignition/modules/royaltyVaultProxy.ts --network <network> --strategy create2 --verify
+```
+
+**Upgrade using upgradeable proxy pattern:**
+
+```bash
+npx hardhat ignition deploy ignition/modules/updateRoyaltyVaultProxy.ts --network <network> --strategy create2 --verify
+```
+**Tests Run Instructions :**
+
+* Run Entire Test Suite:
+
+```bash
+npx hardhat test test/PaniniRoyalty.test.ts
+```
+
+---
+
+### 4.3 Key Contract Functions
+
+#### ETH and ERC20 Withdrawals
+
+* `withdrawETH(amount, receiver)`
+* `withdrawERC20(token, receiver, amount)`
+
+> Requires `msg.sender` to be a whitelisted vault manager
+> Receiver must be in the approved whitelist
+
+#### Token Swaps
+
+* `swapEthForToken(amountIn, amountOutMin, outToken, recipient)`
+* `swapTokenForToken(amountIn, amountOutMin, inToken, outToken, recipient)`
+
+> Uses Uniswap V2 router for deterministic path-based swaps
+
+#### Whitelist Management
+
+* `updateVaultManager(address, bool)` — *owner only*
+* `updateReceiverWhitelistStatus(address, bool)` — *owner only*
+
+#### Token Approvals
+
+* `approveTokenForSwap(token, amount)` — grants router swap allowance
+
+#### Emergency Pause
+
+* `pause()` / `unpause()` — restricts withdrawal/swap functions during freeze
+
+---
+
+### 4.4 Events Emitted
+
+| Event                              | Triggered By                     |
+| ---------------------------------- | -------------------------------- |
+| `Withdrawn()`                      | ETH withdrawal                   |
+| `WithdrawnERC20()`                 | ERC20 token withdrawal           |
+| `ETHSwappedForToken()`             | After ETH swap via Uniswap       |
+| `VaultManagerAccessUpdated()`      | Owner updates vault manager list |
+| `ReceiverWhitelistStatusChanged()` | Owner updates receiver whitelist |
+
+---
+
+### 4.5 Fallback and Receive Support
+
+* Accepts native ETH deposits via `receive()`
+* Has `fallback()` handler to accept plain calls
+
+---
+
+## 5. Limitations & Future Considerations
+
+| Area            | Limitation/Note                                                 |
+| --------------- | --------------------------------------------------------------- |
+| Swap Router     | Uses Uniswap V2 — upgradable to Uniswap V3 for slippage control |
+| ERC20 Approvals | Manual `approveTokenForSwap()` required — can be optimized      |
+
+---
+
+## 6. Functional Summary
+
+* ETH/ERC20 custody
+* Controlled withdrawal system
+* Uniswap V2 powered swaps (ETH → Token, Token → Token)
+* Role-based security with upgradeability and pausability
+* Safe, transparent event logging for audit trails
+

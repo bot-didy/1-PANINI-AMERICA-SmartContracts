@@ -167,7 +167,7 @@ contract PaniniNFTs is
         returns (address)
     {
         // beforeTokenTransfer hook
-        // _beforeTokenTransfer(auth, _ownerOf(tokenId), to, tokenId);
+        _beforeTokenTransfer(auth, _ownerOf(tokenId), to, tokenId);
 
         // panini validateTransfer hook
         _validateTransfer(auth, _ownerOf(tokenId), to);
