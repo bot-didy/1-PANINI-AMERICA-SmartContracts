@@ -8,7 +8,7 @@ const provider = new ethers.JsonRpcProvider("https://eth-sepolia.g.alchemy.com/v
 const admin = new ethers.Wallet(adminPrivateKey, provider);
 const signer = new ethers.Wallet(userPrivateKey, provider);
 const chainId = 11155111;
-const contractAddress = "0x6E126923356f1e5Dbcc5314D45076783c053FdaE";
+const contractAddress = "0x01d1E12761FCDC7C43A5Da68CB3dA56EB966978C";
 
 // Function to will be called NFT is moving from Panini chain to Ethereum.
 // From Panini Application user can NFTs he own on Panini chain. 
@@ -111,4 +111,46 @@ async function batchMintOrUnlockSendTransaction(tokenIds: any, tokenURIs: any, r
 }
 
 
-batchMintOrUnlockSignMessage("0x087DDC2172C826350ff5E80D917393eb9cD28050", [1, 2], ["https://arweave.net/WZBAnUAmSa6zl8K7", "https://arweave.net/RYut_fDWOHOV2WE_2u7Xtr7Ej0"])
+
+async function batchMintOrUnlockSignMessageEIP712(toAddress: string, tokenIds: Array<number>, tokenURIs: Array<string>) {
+    const requestNonce = Date.now();
+    const futureTimestamp = Math.floor(Date.now() / 1000) + 120 * 100;
+    console.log(requestNonce, futureTimestamp);
+
+    const domain = {
+        name: 'PhoenixNFTs',
+        version: '1',
+        chainId: chainId,
+        verifyingContract: contractAddress
+    };
+
+    const types = {
+        BatchMintOrUnlock: [
+            { name: 'to', type: 'address' },
+            { name: 'tokenIds', type: 'uint256[]' },
+            { name: 'tokenURIs', type: 'string[]' },
+            { name: 'requestNonce', type: 'uint256' },
+            { name: 'futureTimestamp', type: 'uint256' }
+        ]
+    };
+
+    const message = {
+        to: toAddress,
+        tokenIds: tokenIds,
+        tokenURIs: tokenURIs,
+        requestNonce: requestNonce,
+        futureTimestamp: futureTimestamp
+    };
+
+    const signature = await admin.signTypedData(domain, types, message);
+
+    console.log("Signature:", signature);
+
+    batchMintOrUnlockSendTransaction(tokenIds, tokenURIs, requestNonce, futureTimestamp, signature);
+}
+
+
+
+// batchMintOrUnlockSignMessage("0x513c2ff203619F0e8576f316c9e654C014d88d05", [90, 96], ["https://arweave.net/WZBAnUAmSa6zl8K7", "https://arweave.net/RYut_fDWOHOV2WE_2u7Xtr7Ej0"])
+
+batchMintOrUnlockSignMessageEIP712("0x087DDC2172C826350ff5E80D917393eb9cD28050", [1, 2], ["https://arweave.net/WZBAnUAmSa6zl8K7", "https://arweave.net/RYut_fDWOHOV2WE_2u7Xtr7Ej0"])

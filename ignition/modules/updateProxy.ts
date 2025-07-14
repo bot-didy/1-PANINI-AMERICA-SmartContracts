@@ -1,7 +1,7 @@
 import { buildModule } from "@nomicfoundation/hardhat-ignition/modules";
 
-const PROXY_ADMIN_CONTRACT_ADDRESS = "0xEb50AE00e3ddFF914c641843960ABfaB6c18fb59"
-const UPGRADEABLE_PROXY_CONTRACT_ADDRESS = "0x75332cc11F60D5d0094cF96a8aA84F3012BaFA75"
+const PROXY_ADMIN_CONTRACT_ADDRESS = "0x72aDd85b2160Cda133bCc1BCDce9D032Fd7450B7"
+const UPGRADEABLE_PROXY_CONTRACT_ADDRESS = "0x01d1E12761FCDC7C43A5Da68CB3dA56EB966978C"
 
 // const PROXY_ADMIN_CONTRACT_ADDRESS = "0x12a6D6C41f126eCcAE823c213B2eEd3eec70f636"
 // const UPGRADEABLE_PROXY_CONTRACT_ADDRESS = "0x66f6f4bA54539040C24D93eC51Da9a61822FBd4A"
@@ -10,7 +10,7 @@ const UPGRADEABLE_PROXY_CONTRACT_ADDRESS = "0x75332cc11F60D5d0094cF96a8aA84F3012
 const upgradeModule = buildModule("UpgradeModuleP4", (m) => {
     const proxyAdminOwner = m.getAccount(0);
 
-    const nftV2 = m.contract("PhoenixNFTs");
+    const nftV2 = m.contract("PaniniNFTs");
 
     const proxyAdmin = m.contractAt("ProxyAdmin", PROXY_ADMIN_CONTRACT_ADDRESS);
     const proxy = m.contractAt("TransparentUpgradeableProxy", UPGRADEABLE_PROXY_CONTRACT_ADDRESS);      

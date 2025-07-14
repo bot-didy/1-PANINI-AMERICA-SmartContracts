@@ -14,6 +14,9 @@ import {SmartValidator} from "./smartlocks/SmartValidator.sol";
 import {CreatorTokenValidator} from "./limitbreak/CreatorTokenValidator.sol";
 import {VerifyByteSignature} from "./openzeppelin/contracts/utils/VerifyByteSignature.sol";
 
+import "./openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import {EIP712Upgradeable} from "./openzeppelin/contracts-upgradeable/utils/cryptography/EIP712Upgradeable.sol";
+
 /**
  * @title PaniniNFTs - An upgradeable ERC721 contract with extended features like pausing, burning, royalties, role-based access, and signature-based minting/unlocking
  * @notice This contract allows controlled minting, locking, and unlocking of NFTs using off-chain signatures with replay protection
@@ -31,13 +34,23 @@ contract PaniniNFTs is
     ERC2981Upgradeable,
     AccessControlUpgradeable,
     SmartValidator,
-    CreatorTokenValidator
+    CreatorTokenValidator,
+    EIP712Upgradeable
 {
     /** @notice Role identifier for operators allowed to mint and manage NFTs */
     bytes32 public constant PANINI_NFT_OPERATOR =
         keccak256("PANINI_NFT_OPERATOR");
     bytes32 public constant PANINI_NFT_MANAGER =
         keccak256("PANINI_NFT_MANAGER");
+
+    bytes32 private constant BATCH_MINT_OR_UNLOCK_TYPEHASH =
+        keccak256(
+            "BatchMintOrUnlock(address to,uint256[] tokenIds,string[] tokenURIs,uint256 requestNonce,uint256 futureTimestamp)"
+        );
+    bytes32 private constant BATCH_LOCK_TYPEHASH =
+        keccak256(
+            "BatchMintOrUnlock(address to,uint256[] tokenIds,uint256 requestNonce,uint256 futureTimestamp)"
+        );
     /** @notice Tracks used nonces to prevent signature replay attacks */
     mapping(uint256 => bool) public usedNonces;
     /** @notice Tracks token IDs that have been burned to prevent reuse */
@@ -102,6 +115,7 @@ contract PaniniNFTs is
         _grantRole(PANINI_NFT_MANAGER, nftManager);
         _grantRole(PANINI_NFT_MANAGER, initialOwner);
         _grantRole(PANINI_NFT_OPERATOR, initialOwner);
+        __EIP712_init("PhoenixNFTs", "1");
     }
 
     /** @notice Pauses all token transfers */
@@ -318,15 +332,20 @@ contract PaniniNFTs is
         require(expiredAt > block.timestamp, "Signature expired");
         require(!usedNonces[requestNonce], "Nonce already used");
 
-        bytes memory message = abi.encode(
-            block.chainid,
-            _msgSender(),
-            tokenIds,
-            tokenURIs,
-            requestNonce,
-            expiredAt
+        bytes32 structHash = keccak256(
+            abi.encode(
+                BATCH_MINT_OR_UNLOCK_TYPEHASH,
+                _msgSender(),
+                keccak256(abi.encodePacked(tokenIds)),
+                _hashTokenURIs(tokenURIs),
+                requestNonce,
+                expiredAt
+            )
         );
-        require(_verifySignature(message, signature), "Invalid signature");
+        require(
+            _verifySignatureTypedData(structHash, signature),
+            "Invalid signature"
+        );
         usedNonces[requestNonce] = true;
 
         for (uint256 i = 0; i < tokenIds.length; i++) {
@@ -371,14 +390,19 @@ contract PaniniNFTs is
         require(expiredAt > block.timestamp, "Signature expired");
         require(!usedNonces[requestNonce], "Nonce already used");
 
-        bytes memory message = abi.encode(
-            block.chainid,
-            _msgSender(),
-            tokenIds,
-            requestNonce,
-            expiredAt
+        bytes32 structHash = keccak256(
+            abi.encode(
+                BATCH_LOCK_TYPEHASH,
+                _msgSender(),
+                keccak256(abi.encodePacked(tokenIds)),
+                requestNonce,
+                expiredAt
+            )
         );
-        require(_verifySignature(message, signature), "Invalid signature");
+        require(
+            _verifySignatureTypedData(structHash, signature),
+            "Invalid signature"
+        );
         usedNonces[requestNonce] = true;
 
         for (uint256 i = 0; i < tokenIds.length; i++) {
@@ -399,6 +423,21 @@ contract PaniniNFTs is
     ) internal view returns (bool) {
         address signer = VerifyByteSignature.recoverSigner(message, signature);
         return hasRole(PANINI_NFT_OPERATOR, signer);
+    }
+
+    /**
+     * @notice Verifies that a given signature is valid and signed by an operator.
+     * @param structHash The encoded message to verify.
+     * @param signature Signature bytes to verify.
+     * @return True if the signature is valid, otherwise false.
+     */
+    function _verifySignatureTypedData(
+        bytes32 structHash,
+        bytes memory signature
+    ) internal view returns (bool) {
+        bytes32 digest = _hashTypedDataV4(structHash);
+        address recoveredSigner = ECDSA.recover(digest, signature);
+        return hasRole(PANINI_NFT_OPERATOR, recoveredSigner);
     }
 
     /**
@@ -446,9 +485,7 @@ contract PaniniNFTs is
      * @param _status True to enable burn, false to disable.
      * @dev Can only be called by onlyOwner.
      */
-    function updateMintStatus(
-        bool _status
-    ) public onlyOwner {
+    function updateMintStatus(bool _status) public onlyOwner {
         isMintingEnabled = _status;
     }
 
@@ -457,9 +494,7 @@ contract PaniniNFTs is
      * @param _status True to enable burn, false to disable.
      * @dev Can only be called by onlyOwner.
      */
-    function updateBurnStatus(
-        bool _status
-    ) public onlyOwner {
+    function updateBurnStatus(bool _status) public onlyOwner {
         isBurnEnabled = _status;
     }
 
@@ -506,5 +541,20 @@ contract PaniniNFTs is
         address account
     ) public virtual override onlyOwner {
         super.revokeRole(role, account);
+    }
+
+    /**
+     * @notice private function for hashing token uris
+     * @param tokenURIs array of token URIs.
+     * @dev called internally.
+     */
+    function _hashTokenURIs(
+        string[] memory tokenURIs
+    ) internal pure returns (bytes32) {
+        bytes memory encoded;
+        for (uint i = 0; i < tokenURIs.length; i++) {
+            encoded = abi.encodePacked(encoded, keccak256(bytes(tokenURIs[i])));
+        }
+        return keccak256(encoded);
     }
 }

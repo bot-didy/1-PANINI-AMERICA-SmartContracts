@@ -8,7 +8,7 @@ const provider = new ethers.JsonRpcProvider("https://eth-sepolia.g.alchemy.com/v
 const admin = new ethers.Wallet(adminPrivateKey, provider);
 const signer = new ethers.Wallet(userPrivateKey, provider);
 const chainId = 11155111;
-const contractAddress = "0x6E126923356f1e5Dbcc5314D45076783c053FdaE";
+const contractAddress = "0x01d1E12761FCDC7C43A5Da68CB3dA56EB966978C";
 
 
 // Function to will be called NFT is moving from Ethereum to Panini chain. 
@@ -109,5 +109,39 @@ async function batchLockSendTransaction(tokenIds: any, requestNonce: any, future
     }
 }
 
+async function batchLockSignMessageEIP712(toAddress: string, tokenIds: Array<number>) {
+    const requestNonce = Date.now();
+    const futureTimestamp = Math.floor(Date.now() / 1000) + 120 * 100;
+    console.log(requestNonce, futureTimestamp);
 
-batchLockSignMessage("0x087DDC2172C826350ff5E80D917393eb9cD28050", [1, 2])
+    const domain = {
+        name: 'PhoenixNFTs',
+        version: '1',
+        chainId: chainId,
+        verifyingContract: contractAddress
+    };
+
+    const types = {
+        BatchMintOrUnlock: [
+            { name: 'to', type: 'address' },
+            { name: 'tokenIds', type: 'uint256[]' },
+            { name: 'requestNonce', type: 'uint256' },
+            { name: 'futureTimestamp', type: 'uint256' }
+        ]
+    };
+
+    const message = {
+        to: toAddress,
+        tokenIds: tokenIds,
+        requestNonce: requestNonce,
+        futureTimestamp: futureTimestamp
+    };
+
+    const signature = await admin.signTypedData(domain, types, message);
+
+    console.log("Signature:", signature);
+
+    batchLockSendTransaction(tokenIds, requestNonce, futureTimestamp, signature);
+}
+
+batchLockSignMessageEIP712("0x087DDC2172C826350ff5E80D917393eb9cD28050", [1, 2])
