@@ -446,9 +446,7 @@ contract PaniniNFTs is
      * @param _status True to enable burn, false to disable.
      * @dev Can only be called by onlyOwner.
      */
-    function updateMintStatus(
-        bool _status
-    ) public onlyOwner {
+    function updateMintStatus(bool _status) public onlyOwner {
         isMintingEnabled = _status;
     }
 
@@ -457,9 +455,7 @@ contract PaniniNFTs is
      * @param _status True to enable burn, false to disable.
      * @dev Can only be called by onlyOwner.
      */
-    function updateBurnStatus(
-        bool _status
-    ) public onlyOwner {
+    function updateBurnStatus(bool _status) public onlyOwner {
         isBurnEnabled = _status;
     }
 
