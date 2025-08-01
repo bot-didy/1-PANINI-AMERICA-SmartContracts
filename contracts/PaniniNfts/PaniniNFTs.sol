@@ -13,6 +13,8 @@ import {AccessControlUpgradeable} from "./openzeppelin/contracts-upgradeable/acc
 import {SmartValidator} from "./smartlocks/SmartValidator.sol";
 import {CreatorTokenValidator} from "./limitbreak/CreatorTokenValidator.sol";
 import {VerifyByteSignature} from "./openzeppelin/contracts/utils/VerifyByteSignature.sol";
+import "./openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
+import "./openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 /**
  * @title PaniniNFTs - An upgradeable ERC721 contract with extended features like pausing, burning, royalties, role-based access, and signature-based minting/unlocking
@@ -33,6 +35,7 @@ contract PaniniNFTs is
     SmartValidator,
     CreatorTokenValidator
 {
+    using ECDSA for bytes32;
     /** @notice Role identifier for operators allowed to mint and manage NFTs */
     bytes32 public constant PANINI_NFT_OPERATOR =
         keccak256("PANINI_NFT_OPERATOR");
@@ -397,7 +400,9 @@ contract PaniniNFTs is
         bytes memory message,
         bytes memory signature
     ) internal view returns (bool) {
-        address signer = VerifyByteSignature.recoverSigner(message, signature);
+        bytes32 messageHash = keccak256(message);
+        bytes32 digest = MessageHashUtils.toEthSignedMessageHash(messageHash);
+        address signer = ECDSA.recover(digest, signature);
         return hasRole(PANINI_NFT_OPERATOR, signer);
     }
 
