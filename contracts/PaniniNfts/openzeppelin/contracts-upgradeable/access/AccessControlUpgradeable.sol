@@ -1,22 +1,19 @@
 // SPDX-License-Identifier: MIT
-// OpenZeppelin Contracts (last updated v5.0.0) (access/AccessControl.sol)
+// OpenZeppelin Contracts (last updated v5.3.0) (access/AccessControl.sol)
 
-pragma solidity 0.8.28;
+pragma solidity ^0.8.28;
 
-import {IAccessControl} from "../../contracts/access/IAccessControl.sol";
+import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 import {ContextUpgradeable} from "../utils/ContextUpgradeable.sol";
 import {ERC165Upgradeable} from "../utils/introspection/ERC165Upgradeable.sol";
 import {Initializable} from "../proxy/utils/Initializable.sol";
 
 /**
- * NOTE: Updated exising AccessControlUpgradeable code slighty as we are using
- * OwnerShip, removed Admin role due to redundancy and all admin actions can be done owner.
  * @dev Contract module that allows children to implement role-based access
  * control mechanisms. This is a lightweight version that doesn't allow enumerating role
  * members except through off-chain means by accessing the contract event logs. Some
  * applications may benefit from on-chain enumerability, for those cases see
  * {AccessControlEnumerable}.
- *
  *
  * Roles are referred to by their `bytes32` identifier. These should be exposed
  * in the external API and be unique. The best way to achieve this is by
@@ -37,17 +34,27 @@ import {Initializable} from "../proxy/utils/Initializable.sol";
  * ```
  *
  * Roles can be granted and revoked dynamically via the {grantRole} and
- * {revokeRole} functions. Only owner can call {grantRole} and {revokeRole}.
+ * {revokeRole} functions. Each role has an associated admin role, and only
+ * accounts that have a role's admin role can call {grantRole} and {revokeRole}.
+ *
+ * By default, the admin role for all roles is `DEFAULT_ADMIN_ROLE`, which means
+ * that only accounts with this role will be able to grant or revoke other
+ * roles. More complex role relationships can be created by using
+ * {_setRoleAdmin}.
+ *
+ * WARNING: The `DEFAULT_ADMIN_ROLE` is also its own admin: it has permission to
+ * grant and revoke this role. Extra precautions should be taken to secure
+ * accounts that have been granted it. We recommend using {AccessControlDefaultAdminRules}
+ * to enforce additional security measures for this role.
  */
-abstract contract AccessControlUpgradeable is
-    Initializable,
-    ContextUpgradeable,
-    IAccessControl,
-    ERC165Upgradeable
-{
+abstract contract AccessControlUpgradeable is Initializable, ContextUpgradeable, IAccessControl, ERC165Upgradeable {
     struct RoleData {
         mapping(address account => bool) hasRole;
+        bytes32 adminRole;
     }
+
+    bytes32 public constant DEFAULT_ADMIN_ROLE = 0x00;
+
 
     /// @custom:storage-location erc7201:openzeppelin.storage.AccessControl
     struct AccessControlStorage {
@@ -55,14 +62,9 @@ abstract contract AccessControlUpgradeable is
     }
 
     // keccak256(abi.encode(uint256(keccak256("openzeppelin.storage.AccessControl")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 private constant AccessControlStorageLocation =
-        0x02dd7bc7dec4dceedda775e58dd541e08a116c6c53815c0bd028192f7b626800;
+    bytes32 private constant AccessControlStorageLocation = 0x02dd7bc7dec4dceedda775e58dd541e08a116c6c53815c0bd028192f7b626800;
 
-    function _getAccessControlStorage()
-        private
-        pure
-        returns (AccessControlStorage storage $)
-    {
+    function _getAccessControlStorage() private pure returns (AccessControlStorage storage $) {
         assembly {
             $.slot := AccessControlStorageLocation
         }
@@ -77,28 +79,22 @@ abstract contract AccessControlUpgradeable is
         _;
     }
 
-    function __AccessControl_init() internal onlyInitializing {}
+    function __AccessControl_init() internal onlyInitializing {
+    }
 
-    function __AccessControl_init_unchained() internal onlyInitializing {}
-
+    function __AccessControl_init_unchained() internal onlyInitializing {
+    }
     /**
      * @dev See {IERC165-supportsInterface}.
      */
-    function supportsInterface(
-        bytes4 interfaceId
-    ) public view virtual override returns (bool) {
-        return
-            interfaceId == type(IAccessControl).interfaceId ||
-            super.supportsInterface(interfaceId);
+    function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool) {
+        return interfaceId == type(IAccessControl).interfaceId || super.supportsInterface(interfaceId);
     }
 
     /**
      * @dev Returns `true` if `account` has been granted `role`.
      */
-    function hasRole(
-        bytes32 role,
-        address account
-    ) public view virtual returns (bool) {
+    function hasRole(bytes32 role, address account) public view virtual returns (bool) {
         AccessControlStorage storage $ = _getAccessControlStorage();
         return $._roles[role].hasRole[account];
     }
@@ -122,6 +118,17 @@ abstract contract AccessControlUpgradeable is
     }
 
     /**
+     * @dev Returns the admin role that controls `role`. See {grantRole} and
+     * {revokeRole}.
+     *
+     * To change a role's admin, use {_setRoleAdmin}.
+     */
+    function getRoleAdmin(bytes32 role) public view virtual returns (bytes32) {
+        AccessControlStorage storage $ = _getAccessControlStorage();
+        return $._roles[role].adminRole;
+    }
+
+    /**
      * @dev Grants `role` to `account`.
      *
      * If `account` had not been already granted `role`, emits a {RoleGranted}
@@ -129,11 +136,11 @@ abstract contract AccessControlUpgradeable is
      *
      * Requirements:
      *
-     * - the caller must be owner .
+     * - the caller must have ``role``'s admin role.
      *
      * May emit a {RoleGranted} event.
      */
-    function grantRole(bytes32 role, address account) public virtual  {
+    function grantRole(bytes32 role, address account) public virtual onlyRole(getRoleAdmin(role)) {
         _grantRole(role, account);
     }
 
@@ -144,14 +151,11 @@ abstract contract AccessControlUpgradeable is
      *
      * Requirements:
      *
-     * - the caller must be owner .
+     * - the caller must have ``role``'s admin role.
      *
      * May emit a {RoleRevoked} event.
      */
-    function revokeRole(
-        bytes32 role,
-        address account
-    ) public virtual  {
+    function revokeRole(bytes32 role, address account) public virtual onlyRole(getRoleAdmin(role)) {
         _revokeRole(role, account);
     }
 
@@ -171,15 +175,24 @@ abstract contract AccessControlUpgradeable is
      *
      * May emit a {RoleRevoked} event.
      */
-    function renounceRole(
-        bytes32 role,
-        address callerConfirmation
-    ) public virtual {
+    function renounceRole(bytes32 role, address callerConfirmation) public virtual {
         if (callerConfirmation != _msgSender()) {
             revert AccessControlBadConfirmation();
         }
 
         _revokeRole(role, callerConfirmation);
+    }
+
+    /**
+     * @dev Sets `adminRole` as ``role``'s admin role.
+     *
+     * Emits a {RoleAdminChanged} event.
+     */
+    function _setRoleAdmin(bytes32 role, bytes32 adminRole) internal virtual {
+        AccessControlStorage storage $ = _getAccessControlStorage();
+        bytes32 previousAdminRole = getRoleAdmin(role);
+        $._roles[role].adminRole = adminRole;
+        emit RoleAdminChanged(role, previousAdminRole, adminRole);
     }
 
     /**
@@ -189,10 +202,7 @@ abstract contract AccessControlUpgradeable is
      *
      * May emit a {RoleGranted} event.
      */
-    function _grantRole(
-        bytes32 role,
-        address account
-    ) internal virtual returns (bool) {
+    function _grantRole(bytes32 role, address account) internal virtual returns (bool) {
         AccessControlStorage storage $ = _getAccessControlStorage();
         if (!hasRole(role, account)) {
             $._roles[role].hasRole[account] = true;
@@ -204,16 +214,13 @@ abstract contract AccessControlUpgradeable is
     }
 
     /**
-     * @dev Attempts to revoke `role` to `account` and returns a boolean indicating if `role` was revoked.
+     * @dev Attempts to revoke `role` from `account` and returns a boolean indicating if `role` was revoked.
      *
      * Internal function without access restriction.
      *
      * May emit a {RoleRevoked} event.
      */
-    function _revokeRole(
-        bytes32 role,
-        address account
-    ) internal virtual returns (bool) {
+    function _revokeRole(bytes32 role, address account) internal virtual returns (bool) {
         AccessControlStorage storage $ = _getAccessControlStorage();
         if (hasRole(role, account)) {
             $._roles[role].hasRole[account] = false;

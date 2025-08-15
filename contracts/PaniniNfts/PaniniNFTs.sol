@@ -12,9 +12,8 @@ import {ERC2981Upgradeable} from "./openzeppelin/contracts-upgradeable/token/com
 import {AccessControlUpgradeable} from "./openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {SmartValidator} from "./smartlocks/SmartValidator.sol";
 import {CreatorTokenValidator} from "./limitbreak/CreatorTokenValidator.sol";
-import {VerifyByteSignature} from "./openzeppelin/contracts/utils/VerifyByteSignature.sol";
-import "./openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
-import "./openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import {MessageHashUtils} from "./openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
+import {ECDSA} from "./openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 /**
  * @title PaniniNFTs - An upgradeable ERC721 contract with extended features like pausing, burning, royalties, role-based access, and signature-based minting/unlocking
@@ -29,7 +28,6 @@ contract PaniniNFTs is
     ERC721PausableUpgradeable,
     Ownable2StepUpgradeable,
     ERC721BurnableUpgradeable,
-    VerifyByteSignature,
     ERC2981Upgradeable,
     AccessControlUpgradeable,
     SmartValidator,
@@ -92,7 +90,7 @@ contract PaniniNFTs is
         uint96 feeNumerator,
         address nftManager
     ) public initializer {
-        __ERC721_init("SuperSonicNfts", "SuperSonicNfts");
+        __ERC721_init("Panini Digital Collectibles", "Panini Digital Collectibles");
         __ERC721Enumerable_init();
         __ERC721URIStorage_init();
         __ERC721Pausable_init();
@@ -102,9 +100,11 @@ contract PaniniNFTs is
         __ERC2981_init(receiver, feeNumerator);
         __CreatorTokenValidator_init();
         __SmartValidator_init();
-        _grantRole(PANINI_NFT_MANAGER, nftManager);
+
+        _grantRole(DEFAULT_ADMIN_ROLE, initialOwner);
         _grantRole(PANINI_NFT_MANAGER, initialOwner);
-        _grantRole(PANINI_NFT_OPERATOR, initialOwner);
+        _grantRole(PANINI_NFT_MANAGER, nftManager);
+        
     }
 
     /** @notice Pauses all token transfers */
@@ -483,29 +483,4 @@ contract PaniniNFTs is
         return result;
     }
 
-    /**
-     * @notice Grants a role to an account.
-     * @param role Role identifier to grant.
-     * @param account Address to which the role is granted.
-     * @dev Only callable by the contract owner.
-     */
-    function grantRole(
-        bytes32 role,
-        address account
-    ) public virtual override onlyOwner {
-        super.grantRole(role, account);
-    }
-
-    /**
-     * @notice Revokes a role from an account.
-     * @param role Role identifier to revoke.
-     * @param account Address from which the role is revoked.
-     * @dev Only callable by the contract owner.
-     */
-    function revokeRole(
-        bytes32 role,
-        address account
-    ) public virtual override onlyOwner {
-        super.revokeRole(role, account);
-    }
 }

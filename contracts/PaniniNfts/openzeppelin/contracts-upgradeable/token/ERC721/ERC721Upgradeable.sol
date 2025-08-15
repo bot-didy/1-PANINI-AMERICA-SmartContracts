@@ -582,29 +582,12 @@ abstract contract ERC721Upgradeable is
     }
 
     /**
-     * @dev Returns whether `tokenId` exists.
-     *
-     * Tokens can be managed by their owner or approved accounts via {approve} or {setApprovalForAll}.
-     *
-     * Tokens start existing when they are minted (`_mint`),
-     * and stop existing when they are burned (`_burn`).
+     * @dev Returns bool whether `tokenId` exists or not.
      */
     function _exists(uint256 tokenId) internal view virtual returns (bool) {
         return _ownerOf(tokenId) != address(0);
     }
 
-    // /**
-    //  * @dev Handles the receipt of an ERC721 token.
-    //  * @return The selector confirming the receipt.
-    //  */
-    // function onERC721Received(
-    //     address,
-    //     address,
-    //     uint256,
-    //     bytes calldata
-    // ) public pure returns (bytes4) {
-    //     return IERC721Receiver.onERC721Received.selector;
-    // }
 
     /**
      * @dev custom function for bridge lock.

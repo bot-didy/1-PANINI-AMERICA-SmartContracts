@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
+// OpenZeppelin Contracts (last updated v5.3.0) (access/IAccessControl.sol)
 
-pragma solidity 0.8.28;
+pragma solidity ^0.8.28;
 
 /**
  * @dev External interface of AccessControl declared to support ERC-165 detection.
@@ -18,6 +19,13 @@ interface IAccessControl {
      */
     error AccessControlBadConfirmation();
 
+    /**
+     * @dev Emitted when `newAdminRole` is set as ``role``'s admin role, replacing `previousAdminRole`
+     *
+     * `DEFAULT_ADMIN_ROLE` is the starting admin for all roles, despite
+     * {RoleAdminChanged} not being emitted to signal this.
+     */
+    event RoleAdminChanged(bytes32 indexed role, bytes32 indexed previousAdminRole, bytes32 indexed newAdminRole);
 
     /**
      * @dev Emitted when `account` is granted `role`.
@@ -25,11 +33,7 @@ interface IAccessControl {
      * `sender` is the account that originated the contract call. This account bears the admin role (for the granted role).
      * Expected in cases where the role was granted using the internal {AccessControl-_grantRole}.
      */
-    event RoleGranted(
-        bytes32 indexed role,
-        address indexed account,
-        address indexed sender
-    );
+    event RoleGranted(bytes32 indexed role, address indexed account, address indexed sender);
 
     /**
      * @dev Emitted when `account` is revoked `role`.
@@ -38,20 +42,20 @@ interface IAccessControl {
      *   - if using `revokeRole`, it is the admin role bearer
      *   - if using `renounceRole`, it is the role bearer (i.e. `account`)
      */
-    event RoleRevoked(
-        bytes32 indexed role,
-        address indexed account,
-        address indexed sender
-    );
+    event RoleRevoked(bytes32 indexed role, address indexed account, address indexed sender);
 
     /**
      * @dev Returns `true` if `account` has been granted `role`.
      */
-    function hasRole(
-        bytes32 role,
-        address account
-    ) external view returns (bool);
+    function hasRole(bytes32 role, address account) external view returns (bool);
 
+    /**
+     * @dev Returns the admin role that controls `role`. See {grantRole} and
+     * {revokeRole}.
+     *
+     * To change a role's admin, use {AccessControl-_setRoleAdmin}.
+     */
+    function getRoleAdmin(bytes32 role) external view returns (bytes32);
 
     /**
      * @dev Grants `role` to `account`.
@@ -91,5 +95,4 @@ interface IAccessControl {
      * - the caller must be `callerConfirmation`.
      */
     function renounceRole(bytes32 role, address callerConfirmation) external;
-
 }

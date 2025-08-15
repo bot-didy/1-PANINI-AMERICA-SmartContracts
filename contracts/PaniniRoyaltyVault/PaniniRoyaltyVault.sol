@@ -53,6 +53,12 @@ contract PaniniRoyaltyVault is
         address indexed token
     );
 
+    /// @dev Only callable by an authorized vault manager.
+    modifier onlyVaultManager() {
+        require(vaultManagers[msg.sender], "Caller is not the vault manager");
+        _;
+    }
+
     /**
      * @notice Disables initializers to protect logic contract.
      */
@@ -80,6 +86,7 @@ contract PaniniRoyaltyVault is
         __Pausable_init();
         uniswapRouter = IUniswapV2Router02(_uniswapRouter);
         vaultManagers[_whitelistedAccount] = true;
+        vaultManagers[_owner] = true;
     }
 
     /**
@@ -87,6 +94,20 @@ contract PaniniRoyaltyVault is
      */
     receive() external payable {
         require(msg.value > 0, "Must send some ETH");
+    }
+
+    /**
+     * @notice Pauses the contract (disables swap and withdraw functions).
+     */
+    function pause() external onlyVaultManager {
+        _pause();
+    }
+
+    /**
+     * @notice Unpauses the contract (enables swap and withdraw functions).
+     */
+    function unpause() external onlyVaultManager {
+        _unpause();
     }
 
     /**
@@ -177,7 +198,10 @@ contract PaniniRoyaltyVault is
      * @param token Address of the ERC20 token.
      * @param amount Amount to approve.
      */
-    function approveTokenForSwap(address token, uint256 amount) external {
+    function approveTokenForSwap(
+        address token,
+        uint256 amount
+    ) external whenNotPaused {
         require(vaultManagers[msg.sender], "Not authorized to approve");
         require(amount > 0, "Amount must be greater than zero");
         IERC20(token).approve(address(uniswapRouter), amount);
@@ -250,20 +274,4 @@ contract PaniniRoyaltyVault is
         );
         emit ETHSwappedForToken(recipient, amountIn, amounts[1], outToken);
     }
-
-    /**
-     * @notice Pauses the contract (disables swap and withdraw functions).
-     */
-    function pause() external onlyOwner {
-        _pause();
-    }
-
-    /**
-     * @notice Unpauses the contract (enables swap and withdraw functions).
-     */
-    function unpause() external onlyOwner {
-        _unpause();
-    }
-
-    fallback() external payable {}
 }
