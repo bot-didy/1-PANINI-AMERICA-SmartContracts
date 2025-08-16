@@ -27,8 +27,8 @@ describe("PaniniNFTs", function () {
   let owner:any, operator:any, user1:any, user2:any, manager:any ;
   let nftContract:any;
   const feeNumerator = 500; // 5%
-  const name = "SuperSonicNfts";
-  const symbol = "SuperSonicNfts";
+  const name = "Panini Digital Collectibles";
+  const symbol = "Panini Digital Collectibles";
 
   beforeEach(async () => {
     [owner, operator, user1, user2, manager] = await ethers.getSigners();
@@ -37,7 +37,7 @@ describe("PaniniNFTs", function () {
     nftContract = await upgrades.deployProxy(PaniniNFTs, [owner.address, owner.address, feeNumerator, manager.address]);
     await nftContract.waitForDeployment();
 
-    await nftContract.grantRole(await nftContract.PANINI_NFT_OPERATOR(), operator.address);
+    await nftContract.connect(owner).grantRole(await nftContract.PANINI_NFT_OPERATOR(), operator.address);
   });
 
   describe("Deployment", function () {
@@ -94,32 +94,32 @@ describe("PaniniNFTs", function () {
     it("should fail if tokenIds and uris lengths mismatch", async () => {
       await nftContract.connect(owner).updateMintStatus(true);
       await expect(
-        nftContract.batchMint(user1.address, [2, 3], ["uri://2"])
+        nftContract.connect(operator).batchMint(user1.address, [2, 3], ["uri://2"])
       ).to.be.revertedWith("Invalid input: length mismatch or too many tokens (max 25)");
     });
 
     it("should fail if tokenId already exists", async () => {
       await nftContract.connect(owner).updateMintStatus(true);
-      await nftContract.safeMint(user1.address, 1, "uri://1");
+      await nftContract.connect(operator).safeMint(user1.address, 1, "uri://1");
       await expect(
-        nftContract.batchMint(user1.address, [1], ["uri://duplicate"])
+        nftContract.connect(operator).batchMint(user1.address, [1], ["uri://duplicate"])
       ).to.be.revertedWith("Token ID already exists");
     });
 
     it("should fail if tokenId is burned", async () => {
       await nftContract.connect(owner).updateMintStatus(true);
-      await nftContract.safeMint(user1.address, 1, "uri://burned");
+      await nftContract.connect(operator).safeMint(user1.address, 1, "uri://burned");
       await nftContract.updateBurnStatus(true);
       await nftContract.connect(user1).burn(1);
       await expect(
-        nftContract.batchMint(user1.address, [1], ["uri://burned-again"])
+        nftContract.connect(operator).batchMint(user1.address, [1], ["uri://burned-again"])
       ).to.be.revertedWith("Token ID was burned and cannot be reused");
     });
 
     it("should fail if recipient is zero address", async () => {
       await nftContract.connect(owner).updateMintStatus(true);
       await expect(
-        nftContract.batchMint(externalEthers.ZeroAddress, [100], ["uri://100"])
+        nftContract.connect(operator).batchMint(externalEthers.ZeroAddress, [100], ["uri://100"])
       ).to.be.revertedWith("Invalid recipient");
     });
   });
@@ -143,13 +143,13 @@ describe("PaniniNFTs", function () {
       await nftContract.connect(owner).updateMintStatus(true);
       await nftContract.connect(manager).pause();
       await expect(
-        nftContract.safeMint(user1.address, 1, "uri://test")     
+        nftContract.connect(operator).safeMint(user1.address, 1, "uri://test")     
       ).to.be.revertedWithCustomError(nftContract, "EnforcedPause");
     });
 
     it("should prevent transfer when paused", async () => {
       await nftContract.connect(owner).updateMintStatus(true);
-      await nftContract.safeMint(user1.address, 1, "uri://test");
+      await nftContract.connect(operator).safeMint(user1.address, 1, "uri://test");
       await nftContract.connect(manager).pause();
       await expect(
         nftContract.connect(user1).transferFrom(user1.address, user2.address, 1)
@@ -158,7 +158,7 @@ describe("PaniniNFTs", function () {
 
     it("should prevent burn when paused", async () => {
       await nftContract.connect(owner).updateMintStatus(true);
-      await nftContract.safeMint(user1.address, 1, "uri://test");
+      await nftContract.connect(operator).safeMint(user1.address, 1, "uri://test");
       await nftContract.connect(manager).pause();
       await nftContract.updateBurnStatus(true)
       await expect(
@@ -179,7 +179,7 @@ describe("PaniniNFTs", function () {
       const PANINI_NFT_OPERATOR = ethers.keccak256(
         ethers.toUtf8Bytes("PANINI_NFT_OPERATOR")
       );
-      await nftContract.grantRole(PANINI_NFT_OPERATOR, operator.address);
+      await nftContract.connect(owner).grantRole(PANINI_NFT_OPERATOR, operator.address);
       await nftContract.connect(owner).updateMintStatus(true);
       await nftContract.connect(operator).safeMint(user1.address, 5, "ipfs://burn");
       await nftContract.connect(owner).updateBurnStatus(true);
@@ -191,7 +191,7 @@ describe("PaniniNFTs", function () {
       const PANINI_NFT_OPERATOR = ethers.keccak256(
         ethers.toUtf8Bytes("PANINI_NFT_OPERATOR")
       );
-      await nftContract.grantRole(PANINI_NFT_OPERATOR, operator.address);
+      await nftContract.connect(owner).grantRole(PANINI_NFT_OPERATOR, operator.address);
       await nftContract.connect(owner).updateBurnStatus(true);
       await nftContract.connect(owner).updateMintStatus(true);
       await nftContract.connect(operator).safeMint(user1.address, 6, "ipfs://failburn");
@@ -206,7 +206,7 @@ describe("PaniniNFTs", function () {
     );
   
     it("should allow the admin to whitelist an address (grant PANINI_NFT_OPERATOR role)", async () => {
-      await nftContract.grantRole(PANINI_NFT_OPERATOR, user1.address);
+      await nftContract.connect(owner).grantRole(PANINI_NFT_OPERATOR, user1.address);
   
       const hasRole = await nftContract.hasRole(PANINI_NFT_OPERATOR, user1.address);
       expect(hasRole).to.be.true;
@@ -215,8 +215,8 @@ describe("PaniniNFTs", function () {
     it("should revert if non-admin tries to grant role", async () => {
       await expect(
          nftContract.connect(user1).grantRole(PANINI_NFT_OPERATOR, user2.address)
-      ).to.be.revertedWithCustomError(nftContract, "OwnableUnauthorizedAccount")
-      .withArgs(user1.address);
+      ).to.be.revertedWithCustomError(nftContract, "AccessControlUnauthorizedAccount")
+      .withArgs(user1.address, await nftContract.DEFAULT_ADMIN_ROLE());
     });
   });
 
@@ -581,12 +581,12 @@ describe("PaniniNFTs", function () {
     it("should transfer nft from source to destination", async () => {
       const PANINI_NFT_OPERATOR = await nftContract.PANINI_NFT_OPERATOR();
       const WHITELISTED_MARKETPLACE = await nftContract.WHITELISTED_MARKETPLACE();
-      await nftContract.grantRole(PANINI_NFT_OPERATOR, owner.address);
+      await nftContract.connect(owner).grantRole(PANINI_NFT_OPERATOR, owner.address);
       const tokenId = 1;
       await nftContract.connect(owner).updateMintStatus(true);
       // Mint to addr1
       await nftContract.safeMint(user1.address, tokenId, "ipfs://somehash");
-      await nftContract.grantRole(WHITELISTED_MARKETPLACE, user2.address);
+      await nftContract.connect(owner).grantRole(WHITELISTED_MARKETPLACE, user2.address);
 
       // addr1 approves addr2 to transfer token
       await nftContract.connect(user1).approve(user2.address, tokenId);
@@ -602,12 +602,12 @@ describe("PaniniNFTs", function () {
     it("should transfer nft from source to destination with data", async () => {
       const PANINI_NFT_OPERATOR = await nftContract.PANINI_NFT_OPERATOR();
       const WHITELISTED_MARKETPLACE = await nftContract.WHITELISTED_MARKETPLACE();
-      await nftContract.grantRole(PANINI_NFT_OPERATOR, owner.address);
+      await nftContract.connect(owner).grantRole(PANINI_NFT_OPERATOR, owner.address);
       const tokenId = 1;
       await nftContract.connect(owner).updateMintStatus(true);
       // Mint to addr1
       await nftContract.safeMint(user1.address, tokenId, "ipfs://somehash");
-      await nftContract.grantRole(WHITELISTED_MARKETPLACE, user2.address);
+      await nftContract.connect(owner).grantRole(WHITELISTED_MARKETPLACE, user2.address);
 
       // addr1 approves addr2 to transfer token
       await nftContract.connect(user1).approve(user2.address, tokenId);
@@ -623,12 +623,12 @@ describe("PaniniNFTs", function () {
     it("should revert if non approved address transfer nft from source to destination", async () => {
       const PANINI_NFT_OPERATOR = await nftContract.PANINI_NFT_OPERATOR();
       const WHITELISTED_MARKETPLACE = await nftContract.WHITELISTED_MARKETPLACE();
-      await nftContract.grantRole(PANINI_NFT_OPERATOR, owner.address);
+      await nftContract.connect(owner).grantRole(PANINI_NFT_OPERATOR, owner.address);
       const tokenId = 1;
       await nftContract.connect(owner).updateMintStatus(true);
       // Mint to addr1
       await nftContract.safeMint(user1.address, tokenId, "ipfs://somehash");
-      await nftContract.grantRole(WHITELISTED_MARKETPLACE, user2.address);
+      await nftContract.connect(owner).grantRole(WHITELISTED_MARKETPLACE, user2.address);
 
       // addr1 approves addr2 to transfer token
       await nftContract.connect(user1).approve(user2.address, tokenId);
@@ -641,12 +641,12 @@ describe("PaniniNFTs", function () {
     it("should revert if approved address transfer some other nft rather than approved from source to destination", async () => {
       const PANINI_NFT_OPERATOR = await nftContract.PANINI_NFT_OPERATOR();
       const WHITELISTED_MARKETPLACE = await nftContract.WHITELISTED_MARKETPLACE();
-      await nftContract.grantRole(PANINI_NFT_OPERATOR, owner.address);
+      await nftContract.connect(owner).grantRole(PANINI_NFT_OPERATOR, owner.address);
       const tokenId = 1;
       await nftContract.connect(owner).updateMintStatus(true);
       // Mint to addr1
       await nftContract.safeMint(user1.address, tokenId, "ipfs://somehash");
-      await nftContract.grantRole(WHITELISTED_MARKETPLACE, user2.address);
+      await nftContract.connect(owner).grantRole(WHITELISTED_MARKETPLACE, user2.address);
 
       // addr1 approves addr2 to transfer token
       await nftContract.connect(user1).approve(user2.address, tokenId);
@@ -663,12 +663,12 @@ describe("PaniniNFTs", function () {
     it("should transfer NFT using safeTransferFrom(address,address,uint256)", async () => {
       const PANINI_NFT_OPERATOR = await nftContract.PANINI_NFT_OPERATOR();
       const WHITELISTED_MARKETPLACE = await nftContract.WHITELISTED_MARKETPLACE();
-      await nftContract.grantRole(PANINI_NFT_OPERATOR, owner.address);
+      await nftContract.connect(owner).grantRole(PANINI_NFT_OPERATOR, owner.address);
       const tokenId = 1;
       await nftContract.connect(owner).updateMintStatus(true);
       // Mint to addr1
       await nftContract.safeMint(user1.address, tokenId, "ipfs://somehash");
-      await nftContract.grantRole(WHITELISTED_MARKETPLACE, user2.address);
+      await nftContract.connect(owner).grantRole(WHITELISTED_MARKETPLACE, user2.address);
 
       // addr1 approves addr2 to transfer token
       await nftContract.connect(user1).approve(user2.address, tokenId);
@@ -684,13 +684,13 @@ describe("PaniniNFTs", function () {
     it("should not transfer NFT using safeTransferFrom(address,address,uint256) when token id not approved", async () => {
       const PANINI_NFT_OPERATOR = await nftContract.PANINI_NFT_OPERATOR();
       const WHITELISTED_MARKETPLACE = await nftContract.WHITELISTED_MARKETPLACE();
-      await nftContract.grantRole(PANINI_NFT_OPERATOR, owner.address);
+      await nftContract.connect(owner).grantRole(PANINI_NFT_OPERATOR, owner.address);
       const tokenId = 1;
       const notApprovedTokenId = 3
       await nftContract.connect(owner).updateMintStatus(true);
       // Mint to addr1
       await nftContract.safeMint(user1.address, tokenId, "ipfs://somehash");
-      await nftContract.grantRole(WHITELISTED_MARKETPLACE, user2.address);
+      await nftContract.connect(owner).grantRole(WHITELISTED_MARKETPLACE, user2.address);
 
       // addr1 approves addr2 to transfer token
       await nftContract.connect(user1).approve(user2.address, tokenId);
@@ -705,7 +705,7 @@ describe("PaniniNFTs", function () {
     it("should fail if non-approved address tries to transfer", async () => {
       const tokenId = 2;
       await nftContract.connect(owner).updateMintStatus(true);
-      await nftContract.safeMint(user1.address, tokenId, "ipfs://somehash");
+      await nftContract.connect(operator).safeMint(user1.address, tokenId, "ipfs://somehash");
       
       await expect(
         nftContract.connect(user2).transferFrom(user1.address, user2.address, tokenId)
@@ -719,7 +719,7 @@ describe("PaniniNFTs", function () {
       const tokenId = 1;
       await nftContract.connect(owner).updateMintStatus(true);
       // Mint to addr1
-      await nftContract.safeMint(user1.address, tokenId, "ipfs://somehash");
+      await nftContract.connect(operator).safeMint(user1.address, tokenId, "ipfs://somehash");
 
       // addr1 approves addr2 to transfer token
       await nftContract.connect(user1).approve(user2.address, tokenId);
@@ -737,7 +737,7 @@ describe("PaniniNFTs", function () {
       const tokenId = 1;
       await nftContract.connect(owner).updateMintStatus(true);
       // Mint to addr1
-      await nftContract.safeMint(user1.address, tokenId, "ipfs://somehash");
+      await nftContract.connect(operator).safeMint(user1.address, tokenId, "ipfs://somehash");
 
       // addr1 approves addr2 to transfer token
       expect( nftContract.connect(user1).approve(user2.address, tokenId)
@@ -778,7 +778,7 @@ describe("PaniniNFTs", function () {
   describe('transferToContract', () => { 
     it("should transfer nft from source to destination", async () => {
       const PANINI_NFT_OPERATOR = await nftContract.PANINI_NFT_OPERATOR();
-      await nftContract.grantRole(PANINI_NFT_OPERATOR, owner.address);
+      await nftContract.connect(owner).grantRole(PANINI_NFT_OPERATOR, owner.address);
       const tokenId = 1;
       await nftContract.connect(owner).updateMintStatus(true);
       // Mint to addr1
@@ -797,9 +797,9 @@ describe("PaniniNFTs", function () {
     })
     it('should not grant/revoke role when called by other than owner', async () => {
       await expect(nftContract.connect(user1).grantRole(await nftContract.PANINI_NFT_OPERATOR(),user1.address)).to.be.
-      revertedWithCustomError(nftContract, 'OwnableUnauthorizedAccount').withArgs(user1.address);
+      revertedWithCustomError(nftContract, 'AccessControlUnauthorizedAccount').withArgs(user1.address, await nftContract.DEFAULT_ADMIN_ROLE());
       await expect(nftContract.connect(user1).revokeRole(await nftContract.PANINI_NFT_OPERATOR(),user1.address)).to.be.
-      revertedWithCustomError(nftContract,'OwnableUnauthorizedAccount').withArgs(user1.address);
+      revertedWithCustomError(nftContract,'AccessControlUnauthorizedAccount').withArgs(user1.address, await nftContract.DEFAULT_ADMIN_ROLE());
     })
   })
 

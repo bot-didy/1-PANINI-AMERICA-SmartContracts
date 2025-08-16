@@ -18,11 +18,10 @@ describe("PaniniRoyaltyVault2", function () {
     // await uniswapRouter.waitForDeployment();
 
     const Vault = await ethers.getContractFactory("PaniniRoyaltyVault");
-    vault = await upgrades.deployProxy(Vault, [owner.address,uniswapRouter.address, owner.address]);
+    vault = await upgrades.deployProxy(Vault, [owner.address, owner.address, recipient.address,uniswapRouter.address]);
 
     vault = await vault.waitForDeployment();
    
-
     
     await owner.sendTransaction({
       to: vault.target,
@@ -33,10 +32,10 @@ describe("PaniniRoyaltyVault2", function () {
   });
 
   it("should allow vault manager to withdraw ETH", async () => {
-    await vault.updateReceiverWhitelistStatus(recipient.address, true);
 
     const amount = ethers.parseEther("0.001");
     const balanceBefore = await ethers.provider.getBalance(recipient.address);
+    await vault.connect(owner).grantRole(await vault.VAULT_MANAGER(), owner);
     await vault.connect(owner).withdrawETH(amount, recipient.address);
     const balanceAfter = await ethers.provider.getBalance(recipient.address);
 
@@ -46,37 +45,44 @@ describe("PaniniRoyaltyVault2", function () {
   it("should not allow non-vault manager to withdraw ETH", async () => {
     await expect(
       vault.connect(addr2).withdrawETH(ethers.parseEther("1"), recipient.address)
-    ).to.be.revertedWith("Not authorized to withdraw");
+    ).to.be.revertedWithCustomError(vault, "AccessControlUnauthorizedAccount").withArgs(
+      addr2.address, await vault.VAULT_MANAGER() 
+    )
   });
 
   it("should allow vault manager to withdraw ERC20 token", async () => {
-    await vault.updateReceiverWhitelistStatus(recipient.address, true);
+    await vault.connect(owner).grantRole(await vault.VAULT_MANAGER(), owner);
     await vault.connect(owner).withdrawERC20(token.target, recipient.address, tokenAmount);
-
     expect(await token.balanceOf(recipient.address)).to.equal(tokenAmount);
   });
 
-  it("should update vault manager whitelist", async () => {
-    expect(await vault.vaultManagers(addr2.address)).to.equal(false);
-    await vault.connect(owner).updateVaultManager(addr2.address, true);
-    expect(await vault.vaultManagers(addr2.address)).to.equal(true);
+  it("grant vault manager role", async () => {
+    await vault.connect(owner).grantRole(await vault.VAULT_MANAGER(), addr2);
+    expect(await vault.hasRole(await vault.VAULT_MANAGER(), addr2.address)).to.equal(true);
+  });
+
+  it("admin only can grant vault manager role", async () => {
+    await expect(vault.connect(addr2).grantRole(await vault.VAULT_MANAGER(), addr2)
+    ).to.be.revertedWithCustomError(vault, "AccessControlUnauthorizedAccount"
+    ).withArgs(addr2.address, await vault.DEFAULT_ADMIN_ROLE());
   });
 
 
   it("should approve token for swap", async () => {
+    await vault.connect(owner).grantRole(await vault.VAULT_MANAGER(), owner);
     await vault.connect(owner).approveTokenForSwap(token.target, tokenAmount);
     const allowance = await token.allowance(vault.target, uniswapRouter.address);
     expect(allowance).to.equal(tokenAmount);
   });
 
   it("should pause and unpause the contract", async () => {
-    await vault.pause();
+    await vault.connect(owner).pause();
+    await vault.connect(owner).grantRole(await vault.VAULT_MANAGER(), addr1);
     await expect(
       vault.connect(addr1).withdrawETH(ethers.parseEther("1"), recipient.address)
     ).to.be.reverted;
 
-    await vault.unpause();
-    await vault.updateReceiverWhitelistStatus(recipient.address, true);
-    await vault.connect(owner).withdrawETH(ethers.parseEther("1"), recipient.address);
+    await vault.connect(owner).unpause();
+    await vault.connect(addr1).withdrawETH(ethers.parseEther("1"), recipient.address);
   });
 });
