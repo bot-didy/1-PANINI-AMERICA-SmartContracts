@@ -86,9 +86,9 @@ contract PaniniNFTs is
      */
     function initialize(
         address initialOwner,
+        address nftManager,
         address receiver,
-        uint96 feeNumerator,
-        address nftManager
+        uint96 feeNumerator
     ) public initializer {
         __ERC721_init("Panini Digital Collectibles", "Panini Digital Collectibles");
         __ERC721Enumerable_init();

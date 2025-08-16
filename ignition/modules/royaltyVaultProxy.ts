@@ -1,18 +1,22 @@
 import { buildModule } from "@nomicfoundation/hardhat-ignition/modules";
 
 const proxyModule = buildModule("RoyaltyVaultProxy", (m) => {
-  const proxyAdminOwner = m.getAccount(0);
+
+  // const proxyAdminOwner = m.getAccount(0);
+  const proxyAdminOwner = '0x7fa859B1E10782Ae660154F9e6b62Df8E2561476';
 
   const implementation = m.contract("PaniniRoyaltyVault");
 
+  const pauser = "0x7fa859B1E10782Ae660154F9e6b62Df8E2561476"
+  const whitelistedReceiver = "0x7fa859B1E10782Ae660154F9e6b62Df8E2561476"
 
-  const managersList = "0xcAb8FF7275813e6Afa5Ee3DbDA7B786a393beDdF"
   const uniswapRouter = "0xeE567Fe1712Faf6149d80dA1E6934E354124CfE3";
-  const owner = "0xcAb8FF7275813e6Afa5Ee3DbDA7B786a393beDdF";
   const initializerData = m.encodeFunctionCall(implementation, "initialize", [
-    managersList,
+    proxyAdminOwner,
+    pauser,
+    whitelistedReceiver,
     uniswapRouter,
-    owner
+
   ]);
 
   const proxy = m.contract("TransparentUpgradeableProxy", [
@@ -30,9 +34,9 @@ const proxyModule = buildModule("RoyaltyVaultProxy", (m) => {
   const proxyAdmin = m.contractAt("ProxyAdmin", proxyAdminAddress);
 
 
-//   console.log('implementation',implementation)
-//   console.log('proxy',proxy)
-//   console.log('proxyAdmin',proxyAdmin)
+  //   console.log('implementation',implementation)
+  //   console.log('proxy',proxy)
+  //   console.log('proxyAdmin',proxyAdmin)
 
   return { proxyAdmin, proxy };
 });

@@ -7,6 +7,8 @@ import "./openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import "./openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./uniswap/IUniswapV2Router02.sol";
+import {AccessControlUpgradeable} from "./openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import "./openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 
 /**
  * @title PaniniRoyaltyVault
@@ -16,15 +18,17 @@ import "./uniswap/IUniswapV2Router02.sol";
 contract PaniniRoyaltyVault is
     Initializable,
     OwnableUpgradeable,
-    PausableUpgradeable
+    PausableUpgradeable,
+    AccessControlUpgradeable,
+    ReentrancyGuardUpgradeable
 {
     using SafeERC20 for IERC20;
 
     /// @notice Addresses allowed to manage the vault (withdraw, approve, swap)
-    mapping(address => bool) public vaultManagers;
-
-    /// @notice Whitelisted recipients eligible for receive funds
-    mapping(address => bool) public whitelistedReceivers;
+    bytes32 public constant VAULT_PAUSER = keccak256("VAULT_PAUSER");
+    bytes32 public constant VAULT_MANAGER = keccak256("VAULT_MANAGER");
+    bytes32 public constant WHITELISTED_RECEIVER =
+        keccak256("WHITELISTED_RECEIVER");
 
     /// @notice Address of the Uniswap V2 router used for swaps
     IUniswapV2Router02 public uniswapRouter;
@@ -39,12 +43,6 @@ contract PaniniRoyaltyVault is
         address indexed token
     );
 
-    /// @notice Emitted when a vault manager is added or removed
-    event VaultManagerAccessUpdated(address indexed account, bool status);
-
-    /// @notice Emitted when a receiver is added or removed from the whitelist
-    event ReceiverWhitelistStatusChanged(address indexed account, bool status);
-
     /// @notice Emitted when ETH is swapped for an ERC20 token
     event ETHSwappedForToken(
         address indexed recipient,
@@ -52,12 +50,6 @@ contract PaniniRoyaltyVault is
         uint256 tokenOut,
         address indexed token
     );
-
-    /// @dev Only callable by an authorized vault manager.
-    modifier onlyVaultManager() {
-        require(vaultManagers[msg.sender], "Caller is not the vault manager");
-        _;
-    }
 
     /**
      * @notice Disables initializers to protect logic contract.
@@ -74,9 +66,10 @@ contract PaniniRoyaltyVault is
      * @param _owner Address that will become the owner.
      */
     function initialize(
+        address _owner,
+        address _pauser,
         address _whitelistedAccount,
-        address _uniswapRouter,
-        address _owner
+        address _uniswapRouter
     ) public initializer {
         require(_uniswapRouter != address(0), "Invalid router address");
         require(_owner != address(0), "Invalid owner address");
@@ -84,9 +77,13 @@ contract PaniniRoyaltyVault is
 
         __Ownable_init(_owner);
         __Pausable_init();
+        __ReentrancyGuard_init();
+
         uniswapRouter = IUniswapV2Router02(_uniswapRouter);
-        vaultManagers[_whitelistedAccount] = true;
-        vaultManagers[_owner] = true;
+
+        _grantRole(DEFAULT_ADMIN_ROLE, _owner);
+        _grantRole(VAULT_PAUSER, _pauser);
+        _grantRole(WHITELISTED_RECEIVER, _whitelistedAccount);
     }
 
     /**
@@ -99,83 +96,15 @@ contract PaniniRoyaltyVault is
     /**
      * @notice Pauses the contract (disables swap and withdraw functions).
      */
-    function pause() external onlyVaultManager {
+    function pause() external onlyRole(VAULT_PAUSER) {
         _pause();
     }
 
     /**
      * @notice Unpauses the contract (enables swap and withdraw functions).
      */
-    function unpause() external onlyVaultManager {
+    function unpause() external onlyRole(VAULT_PAUSER) {
         _unpause();
-    }
-
-    /**
-     * @notice Withdraws ETH from the vault to a whitelisted receiver.
-     * @param amount Amount of ETH to withdraw.
-     * @param receiver Address to receive the ETH.
-     */
-    function withdrawETH(
-        uint256 amount,
-        address receiver
-    ) external whenNotPaused {
-        require(vaultManagers[msg.sender], "Not authorized to withdraw");
-        require(amount <= getEthBalance(), "Insufficient ETH balance");
-        require(
-            receiver != address(0) && whitelistedReceivers[receiver],
-            "Invalid receiver"
-        );
-        payable(receiver).transfer(amount);
-        emit Withdrawn(receiver, amount);
-    }
-
-    /**
-     * @notice Withdraws ERC20 tokens from the vault to a whitelisted receiver.
-     * @param token Address of the ERC20 token.
-     * @param receiver Address to receive the tokens.
-     * @param amount Amount of tokens to withdraw.
-     */
-    function withdrawERC20(
-        address token,
-        address receiver,
-        uint256 amount
-    ) external whenNotPaused {
-        require(vaultManagers[msg.sender], "Not authorized to withdraw");
-        require(amount <= getTokenBalance(token), "Insufficient token balance");
-        require(
-            receiver != address(0) && whitelistedReceivers[receiver],
-            "Invalid receiver"
-        );
-        IERC20(token).safeTransfer(receiver, amount);
-        emit WithdrawnERC20(receiver, amount, token);
-    }
-
-    /**
-     * @notice Updates vault manager whitelist status.
-     * @param account Address to update.
-     * @param status New whitelist status.
-     */
-    function updateVaultManager(
-        address account,
-        bool status
-    ) external onlyOwner {
-        require(account != address(0), "Invalid account address");
-        vaultManagers[account] = status;
-        emit VaultManagerAccessUpdated(account, status);
-    }
-
-    /**
-     * @notice Updates receiver whitelist status.
-     * @param account Address to update.
-     * @param status New whitelist status.
-     */
-    function updateReceiverWhitelistStatus(
-        address account,
-        bool status
-    ) external onlyOwner {
-        require(account != address(0), "Invalid account address");
-        whitelistedReceivers[account] = status;
-        emit ReceiverWhitelistStatusChanged(account, status);
     }
 
     /**
@@ -193,6 +122,48 @@ contract PaniniRoyaltyVault is
         return IERC20(token).balanceOf(address(this));
     }
 
+    // -------- Withdrawals --------
+
+    /**
+     * @notice Withdraws ETH from the vault to a whitelisted receiver.
+     * @param amount Amount of ETH to withdraw.
+     * @param receiver Address to receive the ETH.
+     */
+    function withdrawETH(
+        uint256 amount,
+        address receiver
+    ) external whenNotPaused onlyRole(VAULT_MANAGER) nonReentrant {
+        require(amount <= getEthBalance(), "Insufficient ETH balance");
+        require(
+            receiver != address(0) && hasRole(WHITELISTED_RECEIVER, receiver),
+            "Invalid receiver"
+        );
+        payable(receiver).transfer(amount);
+        emit Withdrawn(receiver, amount);
+    }
+
+    /**
+     * @notice Withdraws ERC20 tokens from the vault to a whitelisted receiver.
+     * @param token Address of the ERC20 token.
+     * @param receiver Address to receive the tokens.
+     * @param amount Amount of tokens to withdraw.
+     */
+    function withdrawERC20(
+        address token,
+        address receiver,
+        uint256 amount
+    ) external whenNotPaused onlyRole(VAULT_MANAGER) nonReentrant {
+        require(amount <= getTokenBalance(token), "Insufficient token balance");
+        require(
+            receiver != address(0) && hasRole(WHITELISTED_RECEIVER, receiver),
+            "Invalid receiver"
+        );
+        IERC20(token).safeTransfer(receiver, amount);
+        emit WithdrawnERC20(receiver, amount, token);
+    }
+
+    // -------- Approvals & Swaps --------
+
     /**
      * @notice Approves a token amount for swapping via a router.
      * @param token Address of the ERC20 token.
@@ -201,8 +172,7 @@ contract PaniniRoyaltyVault is
     function approveTokenForSwap(
         address token,
         uint256 amount
-    ) external whenNotPaused {
-        require(vaultManagers[msg.sender], "Not authorized to approve");
+    ) external whenNotPaused onlyRole(VAULT_MANAGER) nonReentrant {
         require(amount > 0, "Amount must be greater than zero");
         IERC20(token).approve(address(uniswapRouter), amount);
     }
@@ -219,11 +189,10 @@ contract PaniniRoyaltyVault is
         uint256 amountOutMin,
         address outToken,
         address recipient
-    ) external whenNotPaused {
-        require(vaultManagers[msg.sender], "Not authorized to swap");
+    ) external whenNotPaused onlyRole(VAULT_MANAGER) nonReentrant {
         require(amountIn > 0, "Must send ETH to swap");
         require(
-            recipient != address(0) && whitelistedReceivers[recipient],
+            recipient != address(0) && hasRole(WHITELISTED_RECEIVER, recipient),
             "Invalid receiver"
         );
         require(amountOutMin > 0, "Invalid minimum output amount");
@@ -252,11 +221,10 @@ contract PaniniRoyaltyVault is
         address inToken,
         address outToken,
         address recipient
-    ) external whenNotPaused {
-        require(vaultManagers[msg.sender], "Not authorized to swap");
+    ) external whenNotPaused onlyRole(VAULT_MANAGER) nonReentrant {
         require(amountIn > 0, "Must send ETH to swap");
         require(
-            recipient != address(0) && whitelistedReceivers[recipient],
+            recipient != address(0) && hasRole(WHITELISTED_RECEIVER, recipient),
             "Invalid recipient"
         );
         require(amountOutMin > 0, "Invalid minimum output amount");

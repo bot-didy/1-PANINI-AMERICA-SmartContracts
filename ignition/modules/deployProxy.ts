@@ -12,10 +12,10 @@ const proxyModule = buildModule("ProxyModuleSonic", (m) => {
   const implementation = m.contract("PaniniNFTs");
 
   const initializerData = m.encodeFunctionCall(implementation, "initialize", [
-    proxyAdminOwner,//owner
-    ROYALTY_VAULT_ADDRESS,// royalty receiver
-    5000,
-    MANAGER_ADDRESS, // manager    
+    proxyAdminOwner, //owner
+    MANAGER_ADDRESS, // manager        
+    ROYALTY_VAULT_ADDRESS, // royalty receiver
+    5000
   ]);
 
   const proxy = m.contract("TransparentUpgradeableProxy", [
