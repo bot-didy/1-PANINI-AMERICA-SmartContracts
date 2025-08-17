@@ -18,8 +18,8 @@ This technical documentation outlines the architecture, behavior, and access mod
 
 - Secure ETH/ERC20 Storage  
 - Controlled, role-based withdrawals  
-- Swapping volatile tokens to USDC or stable tokens  
-- Address whitelisting for recipients and managers  
+- Swapping volatile tokens to USDC or stable tokens (may be or may not be regular activity)
+- whitelisted receivers, managers and pauser.
 - Upgradeable contract using OpenZeppelin's Transparent Proxy Pattern  
 - Pausable contract with emergency halting
 
@@ -32,33 +32,46 @@ This technical documentation outlines the architecture, behavior, and access mod
 | Token Swap Support       | Swaps ETH or ERC20 via Uniswap V2 Router                           |
 | ETH/ERC20 Withdrawals    | Only whitelisted receivers may receive assets                      |
 | Vault Manager Authorization | Vault managers control swap/withdraw/approve operations         |
-| Pausable                 | Owner can pause/unpause critical functions during emergencies       |
+| Pausable                 | VaultPauser,Owner can pause/unpause critical functions during emergencies       |
 
 ---
 
 ## 3. User Roles & Permissions
 
-### Role
 
-| Role                | Capabilities                                                           |
-|---------------------|------------------------------------------------------------------------|
-| Owner (Multisig)    | Initialize, pause/unpause, manage whitelist and managers              |
-| Vault Manager       | Swap tokens, approve ERC20 for Uniswap, withdraw ETH/ERC20            |
-| Whitelisted Address | Designated recipient eligible to receive withdrawals or swap proceeds |
+### Role Definitions
+
+* **OWNER (Multisig)** → Super admin, pause, can manage roles i.e  update managers/whitelist receivers.
+* **VAULT\_PAUSER** → Can pause/unpause all withdraw/swap activity for safety.
+* **VAULT\_MANAGER** → Operates the vault (withdraw funds, do swaps) but only to **whitelisted receivers**.
+* **WHITELISTED\_RECEIVER** → Only allowed to **receive** funds (cannot trigger vault actions).
+
 
 ### 3.1 Role Control Matrix
 
-| Function                      | Owner | Vault Manager | Whitelisted Address         |
-|-------------------------------|:-----:|:-------------:|:----------------------------:|
-| initialize()                  | ✅    | ❌            | ❌                           |
-| pause()/unpause()            | ✅    | ❌            | ❌                           |
-| updateVaultManager()         | ✅    | ❌            | ❌                           |
-| updateReceiverWhitelistStatus() | ✅ | ❌            | ❌                           |
-| withdrawETH()                | ❌    | ✅            | ✅ *(as recipient)*          |
-| withdrawERC20()              | ❌    | ✅            | ✅ *(as recipient)*          |
-| approveTokenForSwap()        | ❌    | ✅            | ❌                           |
-| swapEthForToken()            | ❌    | ✅            | ✅ *(as recipient)*          |
-| swapTokenForToken()          | ❌    | ✅            | ✅ *(as recipient)*          |
+| Function                          | Owner | Vault Manager | Vault Pauser | Whitelisted Receiver |
+| -------------------------------   | :---: | :-----------: | :----------: | :------------------: |
+| initialize()                      |   ✅   |       ❌       |       ❌      |           ❌          |
+| Add or remove VAULT_MANAGER       |   ✅   |       ❌       |       ❌      |           ❌          |
+| Add or remove VAULT_PAUSER        |   ✅   |       ❌       |       ❌      |           ❌          |
+| Add or remove WHITELISTED_RECEIVER|   ✅   |       ❌       |       ❌      |           ❌          |
+| grant/revoke roles                |   ✅   |       ❌       |       ❌      |           ❌          |
+| pause()/unpause()                 |   ✅   |       ❌       |       ✅      |           ❌          |
+| withdrawETH()                     |   ❌   |       ✅       |       ❌      |  ✅ *(as recipient)*  |
+| withdrawERC20()                   |   ❌   |       ✅       |       ❌      |  ✅ *(as recipient)*  |
+| approveTokenForSwap()             |   ❌   |       ✅       |       ❌      |           ❌          |
+| swapEthForToken()                 |   ❌   |       ✅       |       ❌      |  ✅ *(as recipient)*  |
+| swapTokenForToken()               |   ❌   |       ✅       |       ❌      |  ✅ *(as recipient)*  |
+
+
+
+
+* **Owner** is for governance, SafeWallet MultiSig Account.
+* **Pauser** is for emergency stops.
+* **Manager** is for execution.
+* **Receivers** are pure beneficiaries.
+
+
 
 ---
 

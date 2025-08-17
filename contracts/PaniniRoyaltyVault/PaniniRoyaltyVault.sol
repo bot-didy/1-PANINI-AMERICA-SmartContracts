@@ -82,6 +82,7 @@ contract PaniniRoyaltyVault is
         uniswapRouter = IUniswapV2Router02(_uniswapRouter);
 
         _grantRole(DEFAULT_ADMIN_ROLE, _owner);
+        _grantRole(VAULT_PAUSER, _owner);
         _grantRole(VAULT_PAUSER, _pauser);
         _grantRole(WHITELISTED_RECEIVER, _whitelistedAccount);
     }

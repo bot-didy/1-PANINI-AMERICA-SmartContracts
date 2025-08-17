@@ -27,14 +27,14 @@ describe("PaniniNFTs", function () {
   let owner:any, operator:any, user1:any, user2:any, manager:any ;
   let nftContract:any;
   const feeNumerator = 500; // 5%
-  const name = "Panini Digital Collectibles";
-  const symbol = "Panini Digital Collectibles";
+  const name = "PaniniNFTs";
+  const symbol = "PaniniNFTs";
 
   beforeEach(async () => {
     [owner, operator, user1, user2, manager] = await ethers.getSigners();
 
     const PaniniNFTs = await ethers.getContractFactory("PaniniNFTs");
-    nftContract = await upgrades.deployProxy(PaniniNFTs, [owner.address, owner.address, feeNumerator, manager.address]);
+    nftContract = await upgrades.deployProxy(PaniniNFTs, [owner.address, manager.address, owner.address, feeNumerator ]);
     await nftContract.waitForDeployment();
 
     await nftContract.connect(owner).grantRole(await nftContract.PANINI_NFT_OPERATOR(), operator.address);

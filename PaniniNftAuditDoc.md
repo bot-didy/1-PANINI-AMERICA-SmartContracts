@@ -266,7 +266,7 @@ npx hardhat ignition deploy ignition/modules/updateProxy.ts --network sepolia --
 ```bash
 npx hardhat test test/PaniniNFTs.test.ts
 ```
-**NOTE** : *While running test cases locally, please comment out line 156 in PaniniNFTs.sol. This line is related to beforeTokenTransfer and is used for LimitBreak checks. You can safely test the contract on **Sepolia** or **Mainnet** without this line during local testing.*
+**NOTE** : *While running test cases locally, please comment out line 158 in PaniniNFTs.sol. This line is related to beforeTokenTransfer and is used for LimitBreak checks. You can safely test the contract on **Sepolia** or **Mainnet** without this line during local testing.*
 
 ## 4.7 Contract Architecture / Design
 
