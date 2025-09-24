@@ -16,11 +16,11 @@ import {MessageHashUtils} from "./openzeppelin/contracts/utils/cryptography/Mess
 import {ECDSA} from "./openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 /**
- * @title PaniniNFTs - An upgradeable ERC721 contract with extended features like pausing, burning, royalties, role-based access, and signature-based minting/unlocking
+ * @title PhoenixNFTs - An upgradeable ERC721 contract with extended features like pausing, burning, royalties, role-based access, and signature-based minting/unlocking
  * @notice This contract allows controlled minting, locking, and unlocking of NFTs using off-chain signatures with replay protection
  * @dev Inherits from multiple OpenZeppelin upgradeable extensions and includes custom signature validation
  */
-contract PaniniNFTs is
+contract PhoenixNFTs is
     Initializable,
     ERC721Upgradeable,
     ERC721EnumerableUpgradeable,
@@ -90,7 +90,7 @@ contract PaniniNFTs is
         address receiver,
         uint96 feeNumerator
     ) public initializer {
-        __ERC721_init("PaniniNFTs", "PaniniNFTs");
+        __ERC721_init("PhoenixNFTsT2", "PhoenixNFTsT2");
         __ERC721Enumerable_init();
         __ERC721URIStorage_init();
         __ERC721Pausable_init();
@@ -477,8 +477,14 @@ contract PaniniNFTs is
         );
         TokenOwner[] memory result = new TokenOwner[](tokenIds.length);
         for (uint256 i = 0; i < tokenIds.length; i++) {
-            result[i] = TokenOwner(tokenIds[i], ownerOf(tokenIds[i]));
+            result[i] = TokenOwner(tokenIds[i], super._ownerOf(tokenIds[i]));
         }
         return result;
+    }
+
+    function getRequestNonceStatus(
+        uint256 requestNonce
+    ) public view returns (string memory) {
+        return usedNonces[requestNonce] ? "PROCESSED" : "UNPROCESSED";
     }
 }

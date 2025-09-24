@@ -1,21 +1,21 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import "./openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "./openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import "./openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
-import "./openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "./openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "./uniswap/IUniswapV2Router02.sol";
+import {OwnableUpgradeable} from "./openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {Initializable} from "./openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {PausableUpgradeable} from "./openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
+import {IERC20} from "./openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "./openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IUniswapV2Router02} from "./uniswap/IUniswapV2Router02.sol";
 import {AccessControlUpgradeable} from "./openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import "./openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import {ReentrancyGuardUpgradeable} from "./openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 
 /**
- * @title PaniniRoyaltyVault
+ * @title RoyaltyVault
  * @notice Handles ETH and ERC20 fund management, including withdrawals and swaps using Uniswap.
  * @dev Upgradeable contract with access control, pausing, and whitelist mechanisms.
  */
-contract PaniniRoyaltyVault is
+contract RoyaltyVault is
     Initializable,
     OwnableUpgradeable,
     PausableUpgradeable,
@@ -44,11 +44,20 @@ contract PaniniRoyaltyVault is
     );
 
     /// @notice Emitted when ETH is swapped for an ERC20 token
-    event ETHSwappedForToken(
+    event EthSwappedForToken(
         address indexed recipient,
-        uint256 ethIn,
-        uint256 tokenOut,
-        address indexed token
+        uint256 ethAmountIn,
+        uint256 tokenAmountOut,
+        address indexed tokenOutAddress
+    );
+
+    /// @notice Emitted when an ERC20 token is swapped for another ERC20 token
+    event TokenSwappedForToken(
+        address indexed tokenInAddress,
+        uint256 tokenAmountIn,
+        address indexed tokenOutAddress,
+        uint256 tokenAmountOut,
+        address indexed recipient
     );
 
     /**
@@ -85,6 +94,7 @@ contract PaniniRoyaltyVault is
         _grantRole(VAULT_PAUSER, _owner);
         _grantRole(VAULT_PAUSER, _pauser);
         _grantRole(WHITELISTED_RECEIVER, _whitelistedAccount);
+        _grantRole(WHITELISTED_RECEIVER, address(this));
     }
 
     /**
@@ -170,11 +180,16 @@ contract PaniniRoyaltyVault is
      * @param token Address of the ERC20 token.
      * @param amount Amount to approve.
      */
-    function approveTokenForSwap(
+    function setTokenAllowance(
         address token,
         uint256 amount
     ) external whenNotPaused onlyRole(VAULT_MANAGER) nonReentrant {
-        require(amount > 0, "Amount must be greater than zero");
+        if (amount > 0) {
+            require(
+                IERC20(token).balanceOf(address(this)) >= amount,
+                "Insufficient Token Balance"
+            );
+        }
         IERC20(token).approve(address(uniswapRouter), amount);
     }
 
@@ -187,8 +202,8 @@ contract PaniniRoyaltyVault is
      */
     function swapEthForToken(
         uint256 amountIn,
-        uint256 amountOutMin,
         address outToken,
+        uint256 amountOutMin,
         address recipient
     ) external whenNotPaused onlyRole(VAULT_MANAGER) nonReentrant {
         require(amountIn > 0, "Must send ETH to swap");
@@ -205,7 +220,7 @@ contract PaniniRoyaltyVault is
         uint256[] memory amounts = uniswapRouter.swapExactETHForTokens{
             value: amountIn
         }(amountOutMin, path, recipient, block.timestamp + 500);
-        emit ETHSwappedForToken(recipient, amountIn, amounts[1], outToken);
+        emit EthSwappedForToken(recipient, amountIn, amounts[1], outToken);
     }
 
     /**
@@ -217,10 +232,10 @@ contract PaniniRoyaltyVault is
      * @param recipient Address to receive output tokens.
      */
     function swapTokenForToken(
-        uint256 amountIn,
-        uint256 amountOutMin,
         address inToken,
+        uint256 amountIn,
         address outToken,
+        uint256 amountOutMin,
         address recipient
     ) external whenNotPaused onlyRole(VAULT_MANAGER) nonReentrant {
         require(amountIn > 0, "Must send ETH to swap");
@@ -241,6 +256,19 @@ contract PaniniRoyaltyVault is
             recipient,
             block.timestamp + 500
         );
-        emit ETHSwappedForToken(recipient, amountIn, amounts[1], outToken);
+        emit TokenSwappedForToken(
+            inToken,
+            amountIn,
+            outToken,
+            amounts[1],
+            recipient
+        );
+    }
+
+    function updateUniswapRouter(
+        address newRouter
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(newRouter != address(0), "Invalid router address");
+        uniswapRouter = IUniswapV2Router02(newRouter);
     }
 }

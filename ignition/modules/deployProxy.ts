@@ -1,21 +1,21 @@
 import { buildModule } from "@nomicfoundation/hardhat-ignition/modules";
 
 
-const MANAGER_ADDRESS = "0x7fa859B1E10782Ae660154F9e6b62Df8E2561476"
-const ROYALTY_VAULT_ADDRESS = "0x7fa859B1E10782Ae660154F9e6b62Df8E2561476"
+const MANAGER_ADDRESS = "0x583744DC7550315989244B624A0203961D7d3476"
+const ROYALTY_VAULT_ADDRESS = "0x7A64d939709F76340d6EDd09a785deef6237C5b0"
 
 
-const proxyModule = buildModule("ProxyModuleSonic", (m) => {
+const proxyModule = buildModule("ProxyModuleNFTsT2", (m) => {
 
-  const proxyAdminOwner ="0x53C8c0F72F879efD157189173E0530cE515BC290";
+  const proxyAdminOwner = "0x3fa463C34DfA9D94c4cA48a90987d162d3F72c92";
 
-  const implementation = m.contract("PaniniNFTs");
+  const implementation = m.contract("PhoenixNFTs");
 
   const initializerData = m.encodeFunctionCall(implementation, "initialize", [
     proxyAdminOwner, //owner
-    MANAGER_ADDRESS, // manager        
+    MANAGER_ADDRESS, // manager
     ROYALTY_VAULT_ADDRESS, // royalty receiver
-    5000
+    500 // 5%
   ]);
 
   const proxy = m.contract("TransparentUpgradeableProxy", [
@@ -53,3 +53,4 @@ export default proxyModule;
 
 // npx hardhat ignition deploy ignition/modules/deployProxy.ts --network base_sepolia --strategy create2
 
+// npx hardhat ignition deploy ignition/modules/deployProxy.ts --network mainnet --strategy create2 --verify

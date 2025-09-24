@@ -34,6 +34,10 @@ const config: HardhatUserConfig = {
       url: process.env.ARB_SEPOLIA_RPC,
       accounts: [privateKey]      
     },
+    mainnet:{
+      url: process.env.MAINNET_PRC,
+      accounts: [privateKey]      
+    },
     
   },
   etherscan: {
@@ -61,7 +65,10 @@ const config: HardhatUserConfig = {
     strategyConfig: {
       create2: {
         // To learn more about salts, see the CreateX documentation
-        salt: "0xecb9cb7497ba35ca388c92a284fb1d1c44804ab6fecfc98f0e681fd4e5838704",
+        // salt: "0x171cd042c507f24ef667f9ac79dd3674696fb2b43b0393f36c1106f0d6a20e64",
+         salt: "0x624c15a5d0c0bbdfe8946e50c9d7b7f79091f4e0ff45e4204850a051e0a2e12d"//t2
+        // salt: "0xecb9cb7497ba35ca388c92a284fb1d1c44804ab6fecfc98f0e681fd4e5838704",        
+        
       },
     },
   },
