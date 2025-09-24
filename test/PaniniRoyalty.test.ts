@@ -17,7 +17,7 @@ describe("PaniniRoyaltyVault2", function () {
     // uniswapRouter = await MockRouter.deploy();
     // await uniswapRouter.waitForDeployment();
 
-    const Vault = await ethers.getContractFactory("PaniniRoyaltyVault");
+    const Vault = await ethers.getContractFactory("RoyaltyVault");
     vault = await upgrades.deployProxy(Vault, [owner.address, owner.address, recipient.address,uniswapRouter.address]);
 
     vault = await vault.waitForDeployment();
@@ -70,7 +70,7 @@ describe("PaniniRoyaltyVault2", function () {
 
   it("should approve token for swap", async () => {
     await vault.connect(owner).grantRole(await vault.VAULT_MANAGER(), owner);
-    await vault.connect(owner).approveTokenForSwap(token.target, tokenAmount);
+    await vault.connect(owner).setTokenAllowance(token.target, tokenAmount);
     const allowance = await token.allowance(vault.target, uniswapRouter.address);
     expect(allowance).to.equal(tokenAmount);
   });
