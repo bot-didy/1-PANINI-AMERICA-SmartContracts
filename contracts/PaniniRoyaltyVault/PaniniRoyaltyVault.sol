@@ -15,7 +15,7 @@ import {ReentrancyGuardUpgradeable} from "./openzeppelin/contracts-upgradeable/s
  * @notice Handles ETH and ERC20 fund management, including withdrawals and swaps using Uniswap.
  * @dev Upgradeable contract with access control, pausing, and whitelist mechanisms.
  */
-contract RoyaltyVault is
+contract PaniniRoyaltyVault is
     Initializable,
     OwnableUpgradeable,
     PausableUpgradeable,

@@ -20,7 +20,7 @@ import {ECDSA} from "./openzeppelin/contracts/utils/cryptography/ECDSA.sol";
  * @notice This contract allows controlled minting, locking, and unlocking of NFTs using off-chain signatures with replay protection
  * @dev Inherits from multiple OpenZeppelin upgradeable extensions and includes custom signature validation
  */
-contract PhoenixNFTs is
+contract PaniniNFTs is
     Initializable,
     ERC721Upgradeable,
     ERC721EnumerableUpgradeable,
@@ -90,7 +90,7 @@ contract PhoenixNFTs is
         address receiver,
         uint96 feeNumerator
     ) public initializer {
-        __ERC721_init("PhoenixNFTsT2", "PhoenixNFTsT2");
+        __ERC721_init("PaniniNFTs", "PaniniNFTs");
         __ERC721Enumerable_init();
         __ERC721URIStorage_init();
         __ERC721Pausable_init();

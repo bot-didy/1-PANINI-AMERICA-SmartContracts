@@ -1,7 +1,7 @@
 const { expect } = require("chai");
 const { ethers, upgrades } = require("hardhat");
 
-describe("PaniniRoyaltyVault2", function () {
+describe("PaniniRoyaltyVault", function () {
   let vault:any, owner:any, addr1:any, addr2:any, token:any, uniswapRouter:any, recipient:any, other:any;
   const initialETH = ethers.parseEther("10");
   const tokenAmount = ethers.parseEther("1000");
@@ -17,7 +17,7 @@ describe("PaniniRoyaltyVault2", function () {
     // uniswapRouter = await MockRouter.deploy();
     // await uniswapRouter.waitForDeployment();
 
-    const Vault = await ethers.getContractFactory("RoyaltyVault");
+    const Vault = await ethers.getContractFactory("PaniniRoyaltyVault");
     vault = await upgrades.deployProxy(Vault, [owner.address, owner.address, recipient.address,uniswapRouter.address]);
 
     vault = await vault.waitForDeployment();
