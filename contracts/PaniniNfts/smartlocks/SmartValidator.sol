@@ -5,7 +5,7 @@ import {AccessControlUpgradeable} from "../openzeppelin/contracts-upgradeable/ac
 import {Initializable} from "../openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 //SmartValidator
-contract SmartValidator is Initializable, AccessControlUpgradeable {
+abstract contract SmartValidator is Initializable, AccessControlUpgradeable {
     bytes32 public constant WHITELISTED_MARKETPLACE = keccak256("WHITELISTED_MARKETPLACE");
     bool public paniniLock;
 
@@ -14,6 +14,7 @@ contract SmartValidator is Initializable, AccessControlUpgradeable {
     // @notice Initializes the contract instead of constructor
 
     function __SmartValidator_init() internal onlyInitializing {
+        __AccessControl_init();
         paniniLock = true;
     }
 

@@ -90,6 +90,8 @@ contract PaniniNFTs is
         address receiver,
         uint96 feeNumerator
     ) public initializer {
+        __Context_init();
+        __ERC165_init();
         __ERC721_init("PaniniNFTs", "PaniniNFTs");
         __ERC721Enumerable_init();
         __ERC721URIStorage_init();
@@ -155,7 +157,7 @@ contract PaniniNFTs is
         returns (address)
     {
         // beforeTokenTransfer hook
-        _beforeTokenTransfer(auth, _ownerOf(tokenId), to, tokenId);
+        // _beforeTokenTransfer(auth, _ownerOf(tokenId), to, tokenId);
 
         // panini validateTransfer hook
         _validateTransfer(auth, _ownerOf(tokenId), to);
