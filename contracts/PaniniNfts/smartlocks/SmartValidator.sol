@@ -40,17 +40,6 @@ abstract contract SmartValidator is Initializable, AccessControlUpgradeable {
         }
     }
 
-    /// @notice Validates if a transfer is allowed under the Panini Lock
-    function _validateTransfer(address caller, address from) internal view {
-        if (paniniLock) {
-            if (!hasRole(WHITELISTED_MARKETPLACE, caller) && caller != from) {
-                revert InvalidOperator(
-                    "Caller Is Not Owner Whitelisted Marketplace "
-                );
-            }
-        }
-    }
-
     /// @notice Validates if an approval action is allowed
     function _validateApproval(address _operator) internal view {
         if (paniniLock) {
@@ -63,7 +52,7 @@ abstract contract SmartValidator is Initializable, AccessControlUpgradeable {
     }
 
     /// @notice Enable or disable Panini Lock
-    function setPaniniLock(bool _status) public  {
+    function setPaniniLock(bool _status) public onlyRole(DEFAULT_ADMIN_ROLE) {
         paniniLock = _status;
     }
 }

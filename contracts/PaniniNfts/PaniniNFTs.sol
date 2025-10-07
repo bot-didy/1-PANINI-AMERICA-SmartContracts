@@ -16,7 +16,7 @@ import {MessageHashUtils} from "./openzeppelin/contracts/utils/cryptography/Mess
 import {ECDSA} from "./openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 /**
- * @title PhoenixNFTs - An upgradeable ERC721 contract with extended features like pausing, burning, royalties, role-based access, and signature-based minting/unlocking
+ * @title PaniniNFTs - An upgradeable ERC721 contract with extended features like pausing, burning, royalties, role-based access, and signature-based minting/unlocking
  * @notice This contract allows controlled minting, locking, and unlocking of NFTs using off-chain signatures with replay protection
  * @dev Inherits from multiple OpenZeppelin upgradeable extensions and includes custom signature validation
  */
@@ -81,6 +81,7 @@ contract PaniniNFTs is
     /**
      * @notice Initializes the NFT contract with royalty and access control
      * @param initialOwner Address to be assigned as the initial contract owner
+     * @param nftManager Address to be granted NFT manager role
      * @param receiver Address to receive royalty fees
      * @param feeNumerator Royalty fee (basis points format, e.g., 500 = 5%)
      */
@@ -157,7 +158,7 @@ contract PaniniNFTs is
         returns (address)
     {
         // beforeTokenTransfer hook
-        // _beforeTokenTransfer(auth, _ownerOf(tokenId), to, tokenId);
+        _beforeTokenTransfer(auth, _ownerOf(tokenId), to, tokenId);
 
         // panini validateTransfer hook
         _validateTransfer(auth, _ownerOf(tokenId), to);
@@ -323,7 +324,9 @@ contract PaniniNFTs is
         require(!usedNonces[requestNonce], "Nonce already used");
 
         bytes memory message = abi.encode(
+            address(this),
             block.chainid,
+            "PANINI_MINT_UNLOCK_V1",
             _msgSender(),
             tokenIds,
             tokenURIs,
@@ -448,8 +451,8 @@ contract PaniniNFTs is
     }
 
     /**
-     * @notice Enables or disables burning functionality.
-     * @param _status True to enable burn, false to disable.
+     * @notice Enables or disables minting functionality.
+     * @param _status True to enable mint, false to disable.
      * @dev Can only be called by onlyOwner.
      */
     function updateMintStatus(bool _status) public onlyOwner {

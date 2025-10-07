@@ -70,9 +70,10 @@ contract PaniniRoyaltyVault is
 
     /**
      * @notice Initializes the contract with initial configurations.
-     * @param _whitelistedAccount Vault managers.
-     * @param _uniswapRouter Address of the Uniswap V2 router.
      * @param _owner Address that will become the owner.
+     * @param _pauser Address to be granted pauser role
+     * @param _whitelistedAccount Address to be whitelisted as receiver
+     * @param _uniswapRouter Address of the Uniswap V3 router.
      */
     function initialize(
         address _owner,
@@ -199,8 +200,8 @@ contract PaniniRoyaltyVault is
     /**
      * @notice Swaps ETH for a whitelisted ERC20 token and sends it to the recipient.
      * @param amountIn ETH amount to swap.
-     * @param amountOutMin Minimum acceptable output token amount.
      * @param outToken Address of the token to receive.
+     * @param amountOutMin Minimum acceptable output token amount.
      * @param feeTier feeTier range.
      * @param sqrtPriceLimitX96 input sqrtPriceLimitX96 mostly 0.
      * @param recipient Address to receive the token.
