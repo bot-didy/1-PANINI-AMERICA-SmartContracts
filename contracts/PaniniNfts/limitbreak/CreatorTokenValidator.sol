@@ -8,7 +8,7 @@ import "./interfaces/ITransferValidator.sol";
 import "./interfaces/ITransferValidatorSetTokenType.sol";
 
 /**
- * @title CreatorTokenBase
+ * @title CreatorTokenValidator
  * @author Limit Break, Inc.
  * @notice CreatorTokenBaseV3 is an abstract contract that provides basic functionality for managing token
  * transfer policies through an implementation of ICreatorTokenTransferValidator/ICreatorTokenTransferValidatorV2/ICreatorTokenTransferValidatorV3.

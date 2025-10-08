@@ -40,7 +40,7 @@ contract PaniniNFTs is
     bytes32 public constant PANINI_NFT_MANAGER =
         keccak256("PANINI_NFT_MANAGER");
     /** @notice Tracks used nonces to prevent signature replay attacks */
-    mapping(uint256 => bool) public usedNonces;
+    mapping(uint256 => bool) internal usedNonces;
     /** @notice Tracks token IDs that have been burned to prevent reuse */
     mapping(uint256 => bool) public burnedTokenIds;
 
@@ -487,6 +487,13 @@ contract PaniniNFTs is
         return result;
     }
 
+    /**
+     * @notice Returns the processing status of a given request nonce and can be called by anyone.
+     * @param requestNonce The unique nonce identifier to query.
+     * @return  string representing the status of the nonce:
+     * - `"PROCESSED"` if the nonce has already been used.
+     * - `"UNPROCESSED"` if the nonce has not yet been used.
+     */
     function getRequestNonceStatus(
         uint256 requestNonce
     ) public view returns (string memory) {
