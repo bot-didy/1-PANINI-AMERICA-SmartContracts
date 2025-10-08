@@ -329,7 +329,7 @@ contract PaniniNFTs is
         bytes memory message = abi.encode(
             address(this),
             block.chainid,
-            "PANINI_MINT_UNLOCK_V1",
+            "PANINI_BRIDGE_MINT_UNLOCK_V1",
             _msgSender(),
             tokenIds,
             tokenURIs,
@@ -382,7 +382,9 @@ contract PaniniNFTs is
         require(!usedNonces[requestNonce], "Nonce already used");
 
         bytes memory message = abi.encode(
+            address(this),
             block.chainid,
+            "PANINI_BRIDGE_LOCK_V1",
             _msgSender(),
             tokenIds,
             requestNonce,

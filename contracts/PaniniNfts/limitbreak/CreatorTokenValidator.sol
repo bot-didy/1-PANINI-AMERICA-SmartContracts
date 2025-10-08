@@ -154,7 +154,9 @@ abstract contract CreatorTokenValidator is
                 try
                     ITransferValidatorSetTokenType(validator)
                         .setTokenTypeOfCollection(address(this), _tokenType())
-                {} catch {}
+                {} catch {
+                    revert("Token type registration failed");
+                }
             }
         }
     }
