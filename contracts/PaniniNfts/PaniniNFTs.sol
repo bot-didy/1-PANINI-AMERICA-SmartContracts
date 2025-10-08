@@ -241,7 +241,7 @@ contract PaniniNFTs is
                 !burnedTokenIds[tokenIds[i]],
                 "Token ID was burned and cannot be reused"
             );
-            _mint(to, tokenIds[i]);
+            _safeMint(to, tokenIds[i]);
             _setTokenURI(tokenIds[i], uris[i]);
         }
     }
@@ -279,7 +279,10 @@ contract PaniniNFTs is
         address owner,
         address operator
     ) public view override(ERC721Upgradeable, IERC721) returns (bool) {
-        _validateApproval(operator);
+        // Non-reverting read: treat non-whitelisted operators as not approved
+        if (paniniLock && !hasRole(WHITELISTED_MARKETPLACE, operator)) {
+            return false;
+        }
         return super.isApprovedForAll(owner, operator);
     }
 
