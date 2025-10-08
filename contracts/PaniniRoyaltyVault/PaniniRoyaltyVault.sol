@@ -301,6 +301,16 @@ contract PaniniRoyaltyVault is
         );
     }
 
+    /**
+     * @notice Updates the Uniswap V3 router address used by the contract.
+     * @param newRouter The address of the new Uniswap V3 router contract.
+     *
+     * Requirements:
+     * - `newRouter` cannot be the zero address.
+     * - Caller must have the `DEFAULT_ADMIN_ROLE`.
+     *
+     * Emits no events.
+     */
     function updateUniswapRouter(
         address newRouter
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
