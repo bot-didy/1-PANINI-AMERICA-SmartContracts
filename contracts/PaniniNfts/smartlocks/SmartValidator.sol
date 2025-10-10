@@ -6,12 +6,13 @@ import {Initializable} from "../openzeppelin/contracts-upgradeable/proxy/utils/I
 
 //SmartValidator
 abstract contract SmartValidator is Initializable, AccessControlUpgradeable {
-    bytes32 public constant WHITELISTED_MARKETPLACE = keccak256("WHITELISTED_MARKETPLACE");
+    bytes32 public constant WHITELISTED_MARKETPLACE =
+        keccak256("WHITELISTED_MARKETPLACE");
     bool public paniniLock;
 
     error InvalidOperator(string errorText);
 
-    // @notice Initializes the contract instead of constructor
+    /// @notice Initializes the contract instead of constructor
 
     function __SmartValidator_init() internal onlyInitializing {
         __AccessControl_init();
@@ -40,17 +41,6 @@ abstract contract SmartValidator is Initializable, AccessControlUpgradeable {
         }
     }
 
-    /// @notice Validates if a transfer is allowed under the Panini Lock
-    function _validateTransfer(address caller, address from) internal view {
-        if (paniniLock) {
-            if (!hasRole(WHITELISTED_MARKETPLACE, caller) && caller != from) {
-                revert InvalidOperator(
-                    "Caller Is Not Owner Whitelisted Marketplace "
-                );
-            }
-        }
-    }
-
     /// @notice Validates if an approval action is allowed
     function _validateApproval(address _operator) internal view {
         if (paniniLock) {
@@ -62,8 +52,17 @@ abstract contract SmartValidator is Initializable, AccessControlUpgradeable {
         }
     }
 
-    /// @notice Enable or disable Panini Lock
-    function setPaniniLock(bool _status) public  {
+    /**
+     * @notice Enables or disables the Panini lock feature.
+     *
+     * @param _status Boolean value representing the new lock state:
+     * - `true` to enable the lock.
+     * - `false` to disable the lock.
+     *
+     * Requirements:
+     * - Caller must have the `DEFAULT_ADMIN_ROLE`.
+     */
+    function setPaniniLock(bool _status) public onlyRole(DEFAULT_ADMIN_ROLE) {
         paniniLock = _status;
     }
 }

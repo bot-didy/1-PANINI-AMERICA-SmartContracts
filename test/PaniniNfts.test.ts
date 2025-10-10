@@ -6,7 +6,7 @@ import { ethers as externalEthers } from 'ethers';
 
 const signMessage = async (wallet:any, message:any) => {
   const encoded = new externalEthers.AbiCoder().encode(
-    ["uint256", "address", "uint256[]", "uint256", "uint256"],
+    ["address","uint256","string", "address", "uint256[]", "uint256", "uint256"],
     message
   );
   const hash = ethers.keccak256(encoded);
@@ -15,7 +15,7 @@ const signMessage = async (wallet:any, message:any) => {
 
 const signMessageMintOrUnlock = async (wallet:any, message:any) => {
   const encoded = new externalEthers.AbiCoder().encode(
-    ["uint256", "address", "uint256[]", "string[]", "uint256", "uint256"],
+    ["address","uint256", "string", "address", "uint256[]", "string[]", "uint256", "uint256"],
     message
   );
   const hash = ethers.keccak256(encoded);
@@ -280,7 +280,9 @@ describe("PaniniNFTs", function () {
 
 
       const msg = [
+        nftContract.target,
         chainId,
+        "PANINI_BRIDGE_MINT_UNLOCK_V1",
         user1.address,
         tokenIds,
         tokenURIs,
@@ -302,7 +304,9 @@ describe("PaniniNFTs", function () {
       const chainId = (await ethers.provider.getNetwork()).chainId;
 
       const msg = [
+        nftContract.target,
         chainId,
+        "PANINI_BRIDGE_MINT_UNLOCK_V1",
         user1.address,
         tokenIds,
         tokenURIs,
@@ -330,7 +334,9 @@ describe("PaniniNFTs", function () {
       const chainId = (await ethers.provider.getNetwork()).chainId;
 
       const msg = [
+        nftContract.target,
         chainId,
+        "PANINI_BRIDGE_MINT_UNLOCK_V1",
         user1.address,
         tokenIds,
         tokenURIs,
@@ -355,7 +361,9 @@ describe("PaniniNFTs", function () {
       const chainId = (await ethers.provider.getNetwork()).chainId;
 
       const msg = [
+        nftContract.target,
         chainId,
+        "PANINI_BRIDGE_MINT_UNLOCK_V1",
         user1.address,
         tokenIds,
         tokenURIs,
@@ -377,7 +385,9 @@ describe("PaniniNFTs", function () {
       const chainId = (await ethers.provider.getNetwork()).chainId;
 
       const msg = [
+        nftContract.target,
         chainId,
+        "PANINI_BRIDGE_MINT_UNLOCK_V1",
         user1.address,
         tokenIds,
         tokenURIs,
@@ -402,7 +412,9 @@ describe("PaniniNFTs", function () {
 
       // Mint first
       const mintMessage = [
+        nftContract.target,
         chainId,
+        "PANINI_BRIDGE_MINT_UNLOCK_V1",
         user1.address,
         tokenIds,
         tokenURIs,
@@ -416,7 +428,9 @@ describe("PaniniNFTs", function () {
 
       // Then lock
       const lockMessage = [
+        nftContract.target,
         chainId,
+        "PANINI_BRIDGE_LOCK_V1",
         user1.address,
         tokenIds,
         lockNonce,
@@ -441,7 +455,9 @@ describe("PaniniNFTs", function () {
       await nftContract.connect(operator).safeMint(operator.address, 10, "https:://ifps,io")
 
       const msg = [
+        nftContract.target,
         chainId,
+        "PANINI_BRIDGE_LOCK_V1",
         operator.address,
         tokenIds,
         nonce,
@@ -461,7 +477,9 @@ describe("PaniniNFTs", function () {
       await nftContract.connect(operator).safeMint(operator.address, 10, "https:://ifps,io")
 
       const msg = [
+        nftContract.target,
         chainId,
+        "PANINI_BRIDGE_LOCK_V1",
         operator.address,
         tokenIds,
         nonce,
@@ -482,7 +500,9 @@ describe("PaniniNFTs", function () {
       await nftContract.connect(operator).safeMint(operator.address, 10, "https:://ifps,io")
 
       const msg = [
+        nftContract.target,
         chainId,
+        "PANINI_BRIDGE_LOCK_V1",
         operator.address,
         tokenIds,
         nonce,
@@ -508,7 +528,9 @@ describe("PaniniNFTs", function () {
       await nftContract.connect(operator).safeMint(operator.address, 100, "https:://ifps,io")
       await nftContract.connect(operator).batchMint(operator.address, tokenIds, tokenURIs)
       const msg = [
+        nftContract.target,
         chainId,
+        "PANINI_BRIDGE_LOCK_V1",
         operator.address,
         [100, ...tokenIds],
         nonce,
@@ -528,7 +550,9 @@ describe("PaniniNFTs", function () {
       const chainId = (await ethers.provider.getNetwork()).chainId;
 
       const msg = [
+        nftContract.target,
         chainId,
+        "PANINI_BRIDGE_MINT_UNLOCK_V1",
         user1.address,
         tokenIds,
         tokenURIs,
@@ -714,6 +738,14 @@ describe("PaniniNFTs", function () {
   })
 
   describe('setPaniniLock', () => {
+    it('should allow only owner to change the panini lock value', async () => {
+      await nftContract.setPaniniLock(false);
+      expect(await nftContract.paniniLock()).to.equal(false);
+    })
+    it("shouldn't allow other than owner to change the panini lock value", async () => {
+      await expect(nftContract.connect(operator).setPaniniLock(true)).to.be.revertedWithCustomError(
+        nftContract,"AccessControlUnauthorizedAccount").withArgs(operator.address, await nftContract.DEFAULT_ADMIN_ROLE())
+    })
     it("should transfer NFT using safeTransferFrom(address,address,uint256, bytes)", async () =>{
       await nftContract.setPaniniLock(false);
       const tokenId = 1;

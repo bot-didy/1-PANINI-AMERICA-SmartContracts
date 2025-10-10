@@ -16,7 +16,7 @@ import {MessageHashUtils} from "./openzeppelin/contracts/utils/cryptography/Mess
 import {ECDSA} from "./openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 /**
- * @title PhoenixNFTs - An upgradeable ERC721 contract with extended features like pausing, burning, royalties, role-based access, and signature-based minting/unlocking
+ * @title PaniniNFTs - An upgradeable ERC721 contract with extended features like pausing, burning, royalties, role-based access, and signature-based minting/unlocking
  * @notice This contract allows controlled minting, locking, and unlocking of NFTs using off-chain signatures with replay protection
  * @dev Inherits from multiple OpenZeppelin upgradeable extensions and includes custom signature validation
  */
@@ -30,8 +30,9 @@ contract PaniniNFTs is
     ERC721BurnableUpgradeable,
     ERC2981Upgradeable,
     AccessControlUpgradeable,
-    SmartValidator,
-    CreatorTokenValidator
+    CreatorTokenValidator,
+    SmartValidator
+
 {
     using ECDSA for bytes32;
     /** @notice Role identifier for operators allowed to mint and manage NFTs */
@@ -40,7 +41,7 @@ contract PaniniNFTs is
     bytes32 public constant PANINI_NFT_MANAGER =
         keccak256("PANINI_NFT_MANAGER");
     /** @notice Tracks used nonces to prevent signature replay attacks */
-    mapping(uint256 => bool) public usedNonces;
+    mapping(uint256 => bool) internal usedNonces;
     /** @notice Tracks token IDs that have been burned to prevent reuse */
     mapping(uint256 => bool) public burnedTokenIds;
 
@@ -81,6 +82,7 @@ contract PaniniNFTs is
     /**
      * @notice Initializes the NFT contract with royalty and access control
      * @param initialOwner Address to be assigned as the initial contract owner
+     * @param nftManager Address to be granted NFT manager role
      * @param receiver Address to receive royalty fees
      * @param feeNumerator Royalty fee (basis points format, e.g., 500 = 5%)
      */
@@ -240,7 +242,7 @@ contract PaniniNFTs is
                 !burnedTokenIds[tokenIds[i]],
                 "Token ID was burned and cannot be reused"
             );
-            _mint(to, tokenIds[i]);
+            _safeMint(to, tokenIds[i]);
             _setTokenURI(tokenIds[i], uris[i]);
         }
     }
@@ -278,7 +280,10 @@ contract PaniniNFTs is
         address owner,
         address operator
     ) public view override(ERC721Upgradeable, IERC721) returns (bool) {
-        _validateApproval(operator);
+        // Non-reverting read: treat non-whitelisted operators as not approved
+        if (paniniLock && !hasRole(WHITELISTED_MARKETPLACE, operator)) {
+            return false;
+        }
         return super.isApprovedForAll(owner, operator);
     }
 
@@ -323,7 +328,9 @@ contract PaniniNFTs is
         require(!usedNonces[requestNonce], "Nonce already used");
 
         bytes memory message = abi.encode(
+            address(this),
             block.chainid,
+            "PANINI_BRIDGE_MINT_UNLOCK_V1",
             _msgSender(),
             tokenIds,
             tokenURIs,
@@ -376,7 +383,9 @@ contract PaniniNFTs is
         require(!usedNonces[requestNonce], "Nonce already used");
 
         bytes memory message = abi.encode(
+            address(this),
             block.chainid,
+            "PANINI_BRIDGE_LOCK_V1",
             _msgSender(),
             tokenIds,
             requestNonce,
@@ -448,8 +457,8 @@ contract PaniniNFTs is
     }
 
     /**
-     * @notice Enables or disables burning functionality.
-     * @param _status True to enable burn, false to disable.
+     * @notice Enables or disables minting functionality.
+     * @param _status True to enable mint, false to disable.
      * @dev Can only be called by onlyOwner.
      */
     function updateMintStatus(bool _status) public onlyOwner {
@@ -484,6 +493,13 @@ contract PaniniNFTs is
         return result;
     }
 
+    /**
+     * @notice Returns the processing status of a given request nonce and can be called by anyone.
+     * @param requestNonce The unique nonce identifier to query.
+     * @return  string representing the status of the nonce:
+     * - `"PROCESSED"` if the nonce has already been used.
+     * - `"UNPROCESSED"` if the nonce has not yet been used.
+     */
     function getRequestNonceStatus(
         uint256 requestNonce
     ) public view returns (string memory) {

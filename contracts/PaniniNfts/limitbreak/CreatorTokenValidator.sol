@@ -6,9 +6,11 @@ import "./interfaces/ICreatorToken.sol";
 import "./interfaces/ICreatorTokenLegacy.sol";
 import "./interfaces/ITransferValidator.sol";
 import "./interfaces/ITransferValidatorSetTokenType.sol";
+import {Initializable} from "../openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+
 
 /**
- * @title CreatorTokenBase
+ * @title CreatorTokenValidator
  * @author Limit Break, Inc.
  * @notice CreatorTokenBaseV3 is an abstract contract that provides basic functionality for managing token
  * transfer policies through an implementation of ICreatorTokenTransferValidator/ICreatorTokenTransferValidatorV2/ICreatorTokenTransferValidatorV3.
@@ -29,6 +31,7 @@ import "./interfaces/ITransferValidatorSetTokenType.sol";
  * <ul>Backward and Forward Compatible - V1/V2/V3 Creator Token Base will work with V1/V2/V3 Transfer Validators.</ul>
  */
 abstract contract CreatorTokenValidator is
+    Initializable,
     Ownable2StepUpgradeable,
     ICreatorToken
 {
@@ -45,8 +48,10 @@ abstract contract CreatorTokenValidator is
     bool private isValidatorInitialized;
     /// @dev Address of the transfer validator to apply to transactions.
     address private transferValidator;
+    
+    event TokenTypeRegistrationFailed(address indexed validator, address indexed collection, bytes reason);
 
-    function __CreatorTokenValidator_init() internal {
+    function __CreatorTokenValidator_init() internal onlyInitializing {
         _emitDefaultTransferValidator();
         _registerTokenType(DEFAULT_TRANSFER_VALIDATOR);
     }
@@ -151,7 +156,9 @@ abstract contract CreatorTokenValidator is
                 try
                     ITransferValidatorSetTokenType(validator)
                         .setTokenTypeOfCollection(address(this), _tokenType())
-                {} catch {}
+                {} catch (bytes memory reason){
+                emit TokenTypeRegistrationFailed(validator, address(this), reason);
+                }
             }
         }
     }
