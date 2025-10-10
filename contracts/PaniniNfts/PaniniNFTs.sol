@@ -30,8 +30,9 @@ contract PaniniNFTs is
     ERC721BurnableUpgradeable,
     ERC2981Upgradeable,
     AccessControlUpgradeable,
-    CreatorTokenValidator,
-    SmartValidator
+    SmartValidator,
+    CreatorTokenValidator
+
 
 {
     using ECDSA for bytes32;
@@ -102,8 +103,8 @@ contract PaniniNFTs is
         __Ownable2Step_init();
         __ERC721Burnable_init();
         __ERC2981_init(receiver, feeNumerator);
-        __CreatorTokenValidator_init();
         __SmartValidator_init();
+        __CreatorTokenValidator_init();
 
         _grantRole(DEFAULT_ADMIN_ROLE, initialOwner);
         _grantRole(PANINI_NFT_MANAGER, initialOwner);
