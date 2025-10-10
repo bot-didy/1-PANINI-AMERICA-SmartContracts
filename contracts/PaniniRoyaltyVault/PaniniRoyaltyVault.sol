@@ -234,6 +234,7 @@ contract PaniniRoyaltyVault is
                 tokenOut: outToken,
                 fee: feeTier,
                 recipient: recipient,
+                deadline: block.timestamp + 120,   // 2-minute (TTL)                
                 amountIn: amountIn,
                 amountOutMinimum: amountOutMin,
                 sqrtPriceLimitX96: sqrtPriceLimitX96 // 0 as default
@@ -285,6 +286,7 @@ contract PaniniRoyaltyVault is
                 tokenOut: outToken,
                 fee: feeTier,
                 recipient: recipient,
+                deadline: block.timestamp + 120,   // 2-minute (TTL)
                 amountIn: amountIn,
                 amountOutMinimum: amountOutMin,
                 sqrtPriceLimitX96: sqrtPriceLimitX96 // 0 as default

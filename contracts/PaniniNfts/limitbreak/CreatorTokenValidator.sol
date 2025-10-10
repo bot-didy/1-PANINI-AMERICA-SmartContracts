@@ -48,6 +48,8 @@ abstract contract CreatorTokenValidator is
     bool private isValidatorInitialized;
     /// @dev Address of the transfer validator to apply to transactions.
     address private transferValidator;
+    
+    event TokenTypeRegistrationFailed(address indexed validator, address indexed collection, bytes reason);
 
     function __CreatorTokenValidator_init() internal onlyInitializing {
         _emitDefaultTransferValidator();
@@ -154,8 +156,8 @@ abstract contract CreatorTokenValidator is
                 try
                     ITransferValidatorSetTokenType(validator)
                         .setTokenTypeOfCollection(address(this), _tokenType())
-                {} catch {
-                    revert("Token type registration failed");
+                {} catch (bytes memory reason){
+                emit TokenTypeRegistrationFailed(validator, address(this), reason);
                 }
             }
         }
