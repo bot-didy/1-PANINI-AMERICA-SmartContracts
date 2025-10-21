@@ -438,7 +438,6 @@ contract PaniniNFTs is
     ) public virtual onlyRole(PANINI_NFT_MANAGER) {
         require(_exists(tokenId), "Token ID does not exists");
         _setTokenURI(tokenId, _tokenURI);
-        emit MetadataUpdate(tokenId);
     }
 
     /**
