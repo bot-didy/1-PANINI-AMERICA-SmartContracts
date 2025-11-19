@@ -21,6 +21,13 @@ library ERC721Utils {
      * The acceptance call is not executed and treated as a no-op if the target address doesn't contain code (i.e. an EOA).
      * Otherwise, the recipient must implement {IERC721Receiver-onERC721Received} and return the acceptance magic value to accept
      * the transfer.
+     * @dev NOTE: Sending tokens to contract addresses triggers `onERC721Received`,
+     * allowing the receiver contract to run arbitrary code.
+     * Risks:
+     * - Potential reentrancy or malicious behavior during the callback.
+     * Mitigations:
+     * - Perform all state updates before the external call.
+     * - Use `nonReentrant` when appropriate.
      */
     function checkOnERC721Received(
         address operator,

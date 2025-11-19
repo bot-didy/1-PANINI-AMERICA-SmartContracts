@@ -3,22 +3,22 @@ const { ethers, upgrades } = require("hardhat");
 
 describe("PaniniRoyaltyVault", function () {
   let vault:any, owner:any, addr1:any, addr2:any, token:any, uniswapRouter:any, recipient:any, other:any;
-  const initialETH = ethers.parseEther("10");
+  const initialETH = ethers.parseEther("100");
   const tokenAmount = ethers.parseEther("1000");
 
   beforeEach(async () => {
-    [owner, addr1, addr2, recipient, other, uniswapRouter] = await ethers.getSigners();
+    [owner, addr1, addr2, recipient, other] = await ethers.getSigners();
 
     const MockToken = await ethers.getContractFactory("MockERC20");
     token = await MockToken.deploy("TestToken", "TT", owner.address, tokenAmount);
     await token.waitForDeployment();
 
-    // const MockRouter = await ethers.getContractFactory("MockUniswapRouter");
-    // uniswapRouter = await MockRouter.deploy();
-    // await uniswapRouter.waitForDeployment();
+    const MockRouter = await ethers.getContractFactory("MockUniswapRouter");
+    uniswapRouter = await MockRouter.deploy();
+    await uniswapRouter.waitForDeployment();
 
     const Vault = await ethers.getContractFactory("PaniniRoyaltyVault");
-    vault = await upgrades.deployProxy(Vault, [owner.address, owner.address, recipient.address,uniswapRouter.address]);
+    vault = await upgrades.deployProxy(Vault, [owner.address, owner.address, recipient.address,uniswapRouter.target]);
 
     vault = await vault.waitForDeployment();
    
@@ -71,7 +71,7 @@ describe("PaniniRoyaltyVault", function () {
   it("should approve token for swap", async () => {
     await vault.connect(owner).grantRole(await vault.VAULT_MANAGER(), owner);
     await vault.connect(owner).setTokenAllowance(token.target, tokenAmount);
-    const allowance = await token.allowance(vault.target, uniswapRouter.address);
+    const allowance = await token.allowance(vault.target, uniswapRouter.target);
     expect(allowance).to.equal(tokenAmount);
   });
 
@@ -85,4 +85,17 @@ describe("PaniniRoyaltyVault", function () {
     await vault.connect(owner).unpause();
     await vault.connect(addr1).withdrawETH(ethers.parseEther("1"), recipient.address);
   });
+
+  it("update uniswap router address", async () => {    
+
+    await vault.connect(owner).updateUniswapRouter(uniswapRouter.target)
+    await expect(
+    vault.connect(owner).updateUniswapRouter(other.address)
+    ).to.be.reverted;
+    await expect(
+    vault.connect(owner).updateUniswapRouter(ethers.ZeroAddress)
+    ).to.be.reverted;
+
+  });
+
 });

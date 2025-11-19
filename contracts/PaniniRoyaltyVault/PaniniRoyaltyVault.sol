@@ -11,10 +11,23 @@ import {AccessControlUpgradeable} from "./openzeppelin/contracts-upgradeable/acc
 import {ReentrancyGuardUpgradeable} from "./openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 
 /**
- * @title RoyaltyVault
- * @notice Handles ETH and ERC20 fund management, including withdrawals and swaps using Uniswap.
+ * @title Panini Royalty Vault
+ * @notice Handles ETH and ERC20 fund management, including withdrawals and uses the
+ * Uniswap V3 Router for ETH, ERC20 token swaps.
  * @dev Upgradeable contract with access control, pausing, and whitelist mechanisms.
+ * External Dependency:
+ * - Swap logic relies on the Uniswap router (a third-party DeFi protocol).
+ *
+ * Risks:
+ * - Router issues, liquidity problems, or price manipulation can affect swaps.
+ * - External protocol failures may cause reverts or poor execution.
+ *
+ * Mitigations:
+ * - Uses caller-provided `amountOutMin` to protect against slippage.
+ * - Router address is fixed and trusted.
+ * - Reentrancy protection is applied on swap functions.
  */
+
 contract PaniniRoyaltyVault is
     Initializable,
     OwnableUpgradeable,
@@ -59,6 +72,11 @@ contract PaniniRoyaltyVault is
         uint256 tokenAmountOut,
         address indexed recipient
     );
+    event UniswapRouterUpdated(
+        address indexed admin,
+        address indexed oldRouter,
+        address indexed newRouter
+    );
 
     /**
      * @notice Disables initializers to protect logic contract.
@@ -82,6 +100,7 @@ contract PaniniRoyaltyVault is
         address _uniswapRouter
     ) public initializer {
         require(_uniswapRouter != address(0), "Invalid router address");
+        require(_pauser != address(0), "Invalid router address");
         require(_owner != address(0), "Invalid owner address");
         require(_whitelistedAccount != address(0), "Invalid whitelist address");
 
@@ -124,16 +143,21 @@ contract PaniniRoyaltyVault is
 
     /**
      * @notice Returns the contract's ETH balance.
+     * @return balance The current ETH balance of the contract.
      */
-    function getEthBalance() public view returns (uint256) {
+    function getEthBalance() public view returns (uint256 balance) {
         return address(this).balance;
     }
 
     /**
      * @notice Returns the contract's balance for a given ERC20 token.
      * @param token Address of the token.
+     * @return balance The amount of the specified token held by the contract.
      */
-    function getTokenBalance(address token) public view returns (uint256) {
+    function getTokenBalance(
+        address token
+    ) public view returns (uint256 balance) {
+        require(address(token) != address(0), "Invalid Token address");
         return IERC20(token).balanceOf(address(this));
     }
 
@@ -143,6 +167,8 @@ contract PaniniRoyaltyVault is
      * @notice Withdraws ETH from the vault to a whitelisted receiver.
      * @param amount Amount of ETH to withdraw.
      * @param receiver Address to receive the ETH.
+     * Emits:
+     * - {Withdrawn} indicating the recipient, eth withdrawn.
      */
     function withdrawETH(
         uint256 amount,
@@ -162,6 +188,9 @@ contract PaniniRoyaltyVault is
      * @param token Address of the ERC20 token.
      * @param receiver Address to receive the tokens.
      * @param amount Amount of tokens to withdraw.
+     *
+     * Emits:
+     * - {WithdrawnERC20} indicating the recipient, token amount withdrawn, token address.
      */
     function withdrawERC20(
         address token,
@@ -169,6 +198,7 @@ contract PaniniRoyaltyVault is
         uint256 amount
     ) external whenNotPaused onlyRole(VAULT_MANAGER) nonReentrant {
         require(amount <= getTokenBalance(token), "Insufficient token balance");
+        require(token != address(0), "Invalid token address");
         require(
             receiver != address(0) && hasRole(WHITELISTED_RECEIVER, receiver),
             "Invalid receiver"
@@ -188,6 +218,7 @@ contract PaniniRoyaltyVault is
         address token,
         uint256 amount
     ) external whenNotPaused onlyRole(VAULT_MANAGER) nonReentrant {
+        require(token != address(0), "Invalid token address");
         if (amount > 0) {
             require(
                 IERC20(token).balanceOf(address(this)) >= amount,
@@ -198,13 +229,31 @@ contract PaniniRoyaltyVault is
     }
 
     /**
-     * @notice Swaps ETH for a whitelisted ERC20 token and sends it to the recipient.
-     * @param amountIn ETH amount to swap.
-     * @param outToken Address of the token to receive.
-     * @param amountOutMin Minimum acceptable output token amount.
-     * @param feeTier feeTier range.
-     * @param sqrtPriceLimitX96 input sqrtPriceLimitX96 mostly 0.
-     * @param recipient Address to receive the token.
+     * @notice Swaps ETH for a ERC20 token via Uniswap V3 router.
+     * @dev Validates inputs, enforces access control, and calls
+     *      `uniswapRouter.exactInputSingle{value: amountIn}(params)` using `block.timestamp`
+     *      as the deadline.
+     *
+     * @dev External Dependency — Uniswap V3 Router:
+     * - Relies on Uniswap V3; router issues may affect swap execution.
+     *
+     * Risks:
+     * - Low liquidity, price impact, MEV, or token callback behavior may cause reverts.
+     *
+     * Mitigations:
+     * - Caller provides `amountOutMinimum` to prevent excessive slippage.
+     * - Reentrancy guard applied; token/pool parameters validated before swapping.
+     * @dev Reverts if the router call fails, thereby reverting the entire transaction.
+     * @param amountIn The amount of ETH to send for the swap.
+     * @param outToken The address of the ERC20 token to receive.
+     * @param amountOutMin The minimum token amount acceptable from the swap.
+     * @param feeTier The Uniswap V3 fee tier to use (e.g., 500, 3000, 10000).
+     * @param sqrtPriceLimitX96 The limit for the price (pass 0 for default unrestricted).
+     * @param recipient The address to receive the output token (must be whitelisted).
+     * @return amountOut Amount of `outToken` received.
+     *
+     * Emits:
+     * - {EthSwappedForToken} indicating the recipient, ETH spent, tokens received, and token address.
      */
     function swapEthForToken(
         uint256 amountIn,
@@ -221,20 +270,21 @@ contract PaniniRoyaltyVault is
         returns (uint256 amountOut)
     {
         require(amountIn > 0, "Must send ETH to swap");
+        require(outToken != address(0), "Invalid Out token address");
         require(
             recipient != address(0) && hasRole(WHITELISTED_RECEIVER, recipient),
             "Invalid receiver"
         );
         require(amountOutMin > 0, "Invalid minimum output amount");
 
-        // uniswap v3
-        IUniswapV3Router3.ExactInputSingleParams
-            memory params = IUniswapV3Router3.ExactInputSingleParams({
+        // uniswap v3 swap interaction
+        IUniswapV3Router3.ExactInputSingleParams memory params = IUniswapV3Router3
+            .ExactInputSingleParams({
                 tokenIn: uniswapRouter.WETH9(),
                 tokenOut: outToken,
                 fee: feeTier,
                 recipient: recipient,
-                deadline: block.timestamp + 120,   // 2-minute (TTL)                
+                deadline: block.timestamp + 120, // 2-minute (TTL)
                 amountIn: amountIn,
                 amountOutMinimum: amountOutMin,
                 sqrtPriceLimitX96: sqrtPriceLimitX96 // 0 as default
@@ -246,14 +296,28 @@ contract PaniniRoyaltyVault is
     }
 
     /**
-     * @notice Swaps one ERC20 token for another using Uniswap.
+     * @notice Swaps ERC20 for a ERC20 token via Uniswap V3 router.
+     * @dev Validates inputs, enforces access control, and calls Approves Uniswap router, then calls
+     *      `uniswapRouter.exactInputSingle{value: amountIn}(params)` using `block.timestamp`
+     *      as the deadline.
+     * @dev External Dependency — Uniswap V3 Router:
+     * - Relies on Uniswap V3; router issues may affect swap execution.
+     * Risks:
+     * - Low liquidity, price impact, MEV, or token callback behavior may cause reverts.
+     * Mitigations:
+     * - Caller provides `amountOutMinimum` to prevent excessive slippage.
+     * - Reentrancy guard applied; token/pool parameters validated before swapping.
      * @param inToken Input token address.
      * @param amountIn Input token amount.
      * @param outToken Output token address.
      * @param amountOutMin Minimum acceptable output token amount.
      * @param feeTier feeTier range.
-     * @param sqrtPriceLimitX96 input sqrtPriceLimitX96 mostly 0.
-     * @param recipient Address to receive output tokens.
+     * @param sqrtPriceLimitX96 Price limit.
+     * @param recipient Whitelisted receiver of output tokens.
+     *
+     * @return amountOut Amount of `outToken` received.
+     * Emits:
+     * - {TokenSwappedForToken} indicating the inToken, tokens spent,tokens received,outToken, recipient.
      */
     function swapTokenForToken(
         address inToken,
@@ -271,22 +335,24 @@ contract PaniniRoyaltyVault is
         returns (uint256 amountOut)
     {
         require(amountIn > 0, "Must send ETH to swap");
+        require(inToken != address(0), "Invalid inToken Address");
+        require(outToken != address(0), "Invalid outToken Address");
         require(
             recipient != address(0) && hasRole(WHITELISTED_RECEIVER, recipient),
             "Invalid recipient"
         );
         require(amountOutMin > 0, "Invalid minimum output amount");
 
-        // uniswap v3
+        // erc20 approval to uniswapRouter
         IERC20(inToken).approve(address(uniswapRouter), amountIn);
-
-        IUniswapV3Router3.ExactInputSingleParams
-            memory params = IUniswapV3Router3.ExactInputSingleParams({
+        // uniswap v3 swap interaction
+        IUniswapV3Router3.ExactInputSingleParams memory params = IUniswapV3Router3
+            .ExactInputSingleParams({
                 tokenIn: inToken,
                 tokenOut: outToken,
                 fee: feeTier,
                 recipient: recipient,
-                deadline: block.timestamp + 120,   // 2-minute (TTL)
+                deadline: block.timestamp + 120, // 2-minute (TTL)
                 amountIn: amountIn,
                 amountOutMinimum: amountOutMin,
                 sqrtPriceLimitX96: sqrtPriceLimitX96 // 0 as default
@@ -308,15 +374,21 @@ contract PaniniRoyaltyVault is
      * @param newRouter The address of the new Uniswap V3 router contract.
      *
      * Requirements:
-     * - `newRouter` cannot be the zero address.
+     * - `newRouter` cannot be the zero address, must be valid uniswap v3 address.
      * - Caller must have the `DEFAULT_ADMIN_ROLE`.
      *
-     * Emits no events.
+     * Emits - UniswapRouterUpdated - msgSender, oldRouterAddress, newRouterAddress
      */
     function updateUniswapRouter(
         address newRouter
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         require(newRouter != address(0), "Invalid router address");
+        require(
+            address(newRouter).code.length > 0,
+            "Invalid router: no contract code"
+        );
+        address old = address(uniswapRouter);
         uniswapRouter = IUniswapV3Router3(newRouter);
+        emit UniswapRouterUpdated(_msgSender(), old, newRouter);
     }
 }

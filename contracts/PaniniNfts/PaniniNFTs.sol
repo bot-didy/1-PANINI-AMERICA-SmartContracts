@@ -14,13 +14,14 @@ import {SmartValidator} from "./smartlocks/SmartValidator.sol";
 import {CreatorTokenValidator} from "./limitbreak/CreatorTokenValidator.sol";
 import {MessageHashUtils} from "./openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import {ECDSA} from "./openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import {ReentrancyGuardUpgradeable} from "./openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 
 /**
- * @title PaniniNFTs - An upgradeable ERC721 contract with extended features like pausing, burning, royalties, role-based access, and signature-based minting/unlocking
+ * @title Panini Blockchain - An upgradeable ERC721 contract with extended features like pausing, burning, royalties, role-based access, and signature-based minting/unlocking
  * @notice This contract allows controlled minting, locking, and unlocking of NFTs using off-chain signatures with replay protection
  * @dev Inherits from multiple OpenZeppelin upgradeable extensions and includes custom signature validation
  */
-contract PaniniNFTs is
+contract PaniniBlockchain is
     Initializable,
     ERC721Upgradeable,
     ERC721EnumerableUpgradeable,
@@ -31,9 +32,8 @@ contract PaniniNFTs is
     ERC2981Upgradeable,
     AccessControlUpgradeable,
     SmartValidator,
-    CreatorTokenValidator
-
-
+    CreatorTokenValidator,
+    ReentrancyGuardUpgradeable
 {
     using ECDSA for bytes32;
     /** @notice Role identifier for operators allowed to mint and manage NFTs */
@@ -80,6 +80,20 @@ contract PaniniNFTs is
         uint256[] tokenIds
     );
 
+    // @notice Emitted when the minting functionality flag is updated.
+    event MintStatusUpdated(
+        address indexed owner,
+        bool oldStatus,
+        bool newStatus
+    );
+
+    // @notice Emitted when the burning functionality flag is updated.
+    event BurnStatusUpdated(
+        address indexed admin,
+        bool oldStatus,
+        bool newStatus
+    );
+
     /**
      * @notice Initializes the NFT contract with royalty and access control
      * @param initialOwner Address to be assigned as the initial contract owner
@@ -95,7 +109,7 @@ contract PaniniNFTs is
     ) public initializer {
         __Context_init();
         __ERC165_init();
-        __ERC721_init("PaniniNFTs", "PaniniNFTs");
+        __ERC721_init("Panini Blockchain", "PaniniBC");
         __ERC721Enumerable_init();
         __ERC721URIStorage_init();
         __ERC721Pausable_init();
@@ -105,6 +119,7 @@ contract PaniniNFTs is
         __ERC2981_init(receiver, feeNumerator);
         __SmartValidator_init();
         __CreatorTokenValidator_init();
+        __ReentrancyGuard_init();
 
         _grantRole(DEFAULT_ADMIN_ROLE, initialOwner);
         _grantRole(PANINI_NFT_MANAGER, initialOwner);
@@ -127,13 +142,22 @@ contract PaniniNFTs is
      * @param tokenId The ID of the token to be minted
      * @param uri Metadata URI associated with the token
      * @dev Can only be called by PANINI_NFT_OPERATOR
+     * 
+     * NOTE: Sending tokens to contract addresses triggers `onERC721Received`,
+     * allowing the receiver contract to run arbitrary code.
+     * Risks:
+     * - Potential reentrancy or malicious behavior during the callback.
+     * Mitigations:
+     * - Perform all state updates before the external call.
+     * - Use `nonReentrant` when appropriate.
      */
     function safeMint(
         address to,
         uint256 tokenId,
         string memory uri
-    ) public onlyRole(PANINI_NFT_OPERATOR) {
+    ) public onlyRole(PANINI_NFT_OPERATOR) nonReentrant {
         require(isMintingEnabled, "Minting NFT is not enabled");
+        require(to != address(0), "Invalid recipient");
         require(
             !burnedTokenIds[tokenId],
             "Token ID was burned and cannot be reused"
@@ -159,7 +183,8 @@ contract PaniniNFTs is
         )
         returns (address)
     {
-        // beforeTokenTransfer hook
+
+        // limit break beforeTokenTransfer hook
         _beforeTokenTransfer(auth, _ownerOf(tokenId), to, tokenId);
 
         // panini validateTransfer hook
@@ -268,6 +293,7 @@ contract PaniniNFTs is
         address operator,
         uint256 tokenId
     ) public override(ERC721Upgradeable, IERC721) {
+        require(operator != address(0), "Invalid recipient");
         _validateApproval(operator);
         super.approve(operator, tokenId);
     }
@@ -281,6 +307,8 @@ contract PaniniNFTs is
         address owner,
         address operator
     ) public view override(ERC721Upgradeable, IERC721) returns (bool) {
+        require(owner != address(0), "Invalid recipient");
+        require(operator != address(0), "Invalid recipient");
         // Non-reverting read: treat non-whitelisted operators as not approved
         if (paniniLock && !hasRole(WHITELISTED_MARKETPLACE, operator)) {
             return false;
@@ -308,7 +336,10 @@ contract PaniniNFTs is
      * @param requestNonce A unique nonce for the request.
      * @param expiredAt Expiry timestamp of the signature.
      * @param signature Signature authorizing the request.
-     * @dev Prevents replay attacks using nonce and validates signature.
+     * @dev Prevents replay attacks using requestNonce.
+     * @dev Uses `block.timestamp` to validate signature expiry (`expiredAt > block.timestamp`).
+     *
+     * Emits - NFTBatchMintedOrUnlocked - including request nonce, msg.sender, tokenIds.
      */
     function batchMintOrUnlock(
         uint256[] calldata tokenIds,
@@ -316,7 +347,7 @@ contract PaniniNFTs is
         uint256 requestNonce,
         uint256 expiredAt,
         bytes calldata signature
-    ) external {
+    ) external nonReentrant {
         require(
             tokenIds.length == tokenURIs.length,
             "Input array lengths mismatch"
@@ -368,14 +399,18 @@ contract PaniniNFTs is
      * @param requestNonce A unique nonce for the request.
      * @param expiredAt Expiry timestamp of the signature.
      * @param signature Signature authorizing the request.
-     * @dev Transfers ownership to the contract temporarily as an escrow mechanism.
+     * @dev Prevents replay attacks using requestNonce.
+     * @dev Uses `block.timestamp` to validate signature expiry (`expiredAt > block.timestamp`).
+     * @dev Assigns ownership to this contract to act as an escrow.
+     *
+     * Emits - NFTBatchLocked - including request nonce, msg.sender, tokenIds
      */
     function batchLockNFT(
         uint256[] calldata tokenIds,
         uint256 requestNonce,
         uint256 expiredAt,
         bytes calldata signature
-    ) external {
+    ) external nonReentrant {
         require(
             tokenIds.length <= 25,
             "Input array length can't be greater than 25"
@@ -430,6 +465,7 @@ contract PaniniNFTs is
      * @notice Force-updates the token URI for a specific token.
      * @param tokenId The token ID to update.
      * @param _tokenURI The new token URI.
+     * Emits - MetadataUpdate - includes tokenId.
      * @dev Can only be called by PANINI_NFT_MANAGER. Intended for rare metadata corrections.
      */
     function updateTokenURI(
@@ -438,6 +474,7 @@ contract PaniniNFTs is
     ) public virtual onlyRole(PANINI_NFT_MANAGER) {
         require(_exists(tokenId), "Token ID does not exists");
         _setTokenURI(tokenId, _tokenURI);
+        emit MetadataUpdate(tokenId);
     }
 
     /**
@@ -460,18 +497,24 @@ contract PaniniNFTs is
      * @notice Enables or disables minting functionality.
      * @param _status True to enable mint, false to disable.
      * @dev Can only be called by onlyOwner.
+     * Emits - MintStatusUpdated event - msg.sender, oldstatus, newstatus
      */
     function updateMintStatus(bool _status) public onlyOwner {
+        bool oldStatus = isMintingEnabled;
         isMintingEnabled = _status;
+        emit MintStatusUpdated(_msgSender(), oldStatus, isMintingEnabled);
     }
 
     /**
      * @notice Enables or disables burning functionality.
      * @param _status True to enable burn, false to disable.
      * @dev Can only be called by onlyOwner.
+     * Emits - BurnStatusUpdated event - msg.sender, oldstatus, newstatus
      */
     function updateBurnStatus(bool _status) public onlyOwner {
+        bool oldStatus = isBurnEnabled;
         isBurnEnabled = _status;
+        emit BurnStatusUpdated(_msgSender(), oldStatus, isBurnEnabled);
     }
 
     /**

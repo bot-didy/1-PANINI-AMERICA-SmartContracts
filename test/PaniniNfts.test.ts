@@ -1,4 +1,3 @@
-import { Address } from './../typechain-types/@openzeppelin/contracts/utils/Address';
 const { expect } = require("chai");
 const { ethers, upgrades } = require("hardhat");
 import { ethers as externalEthers } from 'ethers';
@@ -22,19 +21,19 @@ const signMessageMintOrUnlock = async (wallet:any, message:any) => {
   return await wallet.signMessage(ethers.getBytes(hash));
 };
 
-describe("PaniniNFTs", function () {
+describe("PaniniBlockchain", function () {
   
   let owner:any, operator:any, user1:any, user2:any, manager:any ;
   let nftContract:any;
   const feeNumerator = 500; // 5%
-  const name = "PaniniNFTs";
-  const symbol = "PaniniNFTs";
+  const name = "Panini Blockchain";
+  const symbol = "PaniniBC";
 
   beforeEach(async () => {
     [owner, operator, user1, user2, manager] = await ethers.getSigners();
 
-    const PaniniNFTs = await ethers.getContractFactory("PaniniNFTs");
-    nftContract = await upgrades.deployProxy(PaniniNFTs, [owner.address, manager.address, owner.address, feeNumerator ]);
+    const PaniniBlockchain = await ethers.getContractFactory("PaniniBlockchain");
+    nftContract = await upgrades.deployProxy(PaniniBlockchain, [owner.address, manager.address, owner.address, feeNumerator ]);
     await nftContract.waitForDeployment();
 
     await nftContract.connect(owner).grantRole(await nftContract.PANINI_NFT_OPERATOR(), operator.address);
@@ -199,7 +198,7 @@ describe("PaniniNFTs", function () {
     });
   });
 
-  describe("PaniniNFTs - Whitelisting (Role-based Access)", () => {
+  describe("PaniniBlockchain - Whitelisting (Role-based Access)", () => {
    
     const PANINI_NFT_OPERATOR = ethers.keccak256(
       ethers.toUtf8Bytes("PANINI_NFT_OPERATOR")

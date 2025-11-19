@@ -13,6 +13,7 @@ import {ERC165Upgradeable} from "../../utils/introspection/ERC165Upgradeable.sol
 import {IERC721Errors} from "../../../contracts/interfaces/draft-IERC6093.sol";
 import {Initializable} from "../../proxy/utils/Initializable.sol";
 import {IERC721Receiver} from "../../../contracts/token/ERC721/IERC721Receiver.sol";
+
 /**
  * @dev Implementation of https://eips.ethereum.org/EIPS/eip-721[ERC-721] Non-Fungible Token Standard, including
  * the Metadata extension, but not including the Enumerable extension, which is available separately as
@@ -41,7 +42,8 @@ abstract contract ERC721Upgradeable is
     }
 
     // keccak256(abi.encode(uint256(keccak256("openzeppelin.storage.ERC721")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 private constant ERC721StorageLocation = 0x80bb2b638cc20bc4d0a60d66940f3ab4a00c1d7b313497ca82fb0b4ab0079300;
+    bytes32 private constant ERC721StorageLocation =
+        0x80bb2b638cc20bc4d0a60d66940f3ab4a00c1d7b313497ca82fb0b4ab0079300;
 
     function _getERC721Storage()
         private
@@ -215,6 +217,13 @@ abstract contract ERC721Upgradeable is
 
     /**
      * @dev See {IERC721-safeTransferFrom}.
+     * @dev NOTE: Sending tokens to contract addresses triggers `onERC721Received`,
+     * allowing the receiver contract to run arbitrary code.
+     * Risks:
+     * - Potential reentrancy or malicious behavior during the callback.
+     * Mitigations:
+     * - Perform all state updates before the external call.
+     * - Use `nonReentrant` when appropriate.
      */
     function safeTransferFrom(
         address from,
@@ -474,6 +483,14 @@ abstract contract ERC721Upgradeable is
      * - `from` cannot be the zero address.
      * - If `to` refers to a smart contract, it must implement {IERC721Receiver-onERC721Received}, which is called upon a safe transfer.
      *
+     *@dev NOTE: Sending tokens to contract addresses triggers `onERC721Received`,
+     * allowing the receiver contract to run arbitrary code.
+     * Risks:
+     * - Potential reentrancy or malicious behavior during the callback.
+     * Mitigations:
+     * - Perform all state updates before the external call.
+     * - Use `nonReentrant` when appropriate.
+     *
      * Emits a {Transfer} event.
      */
     function _safeTransfer(address from, address to, uint256 tokenId) internal {
@@ -588,10 +605,16 @@ abstract contract ERC721Upgradeable is
         return _ownerOf(tokenId) != address(0);
     }
 
-
     /**
      * @dev custom function for bridge lock.
      * bridgeTransferFrom
+     * @dev NOTE: Sending tokens to contract addresses triggers `onERC721Received`,
+     * allowing the receiver contract to run arbitrary code.
+     * Risks:
+     * - Potential reentrancy or malicious behavior during the callback.
+     * Mitigations:
+     * - Perform all state updates before the external call.
+     * - Use `nonReentrant` when appropriate.
      */
     function _bridgeLockTransfer(
         address from,
