@@ -146,10 +146,19 @@ abstract contract CreatorTokenValidator is
         return uint16(TOKEN_TYPE_ERC721);
     }
 
+
+    /// @dev Registers this collection’s token type with a validator contract (if provided).
+    ///      - Checks that `validator` address is non-zero.
+    ///      - Uses `extcodesize` via inline assembly to check that `validator` is indeed a deployed contract.
+    ///      - If so, calls `setTokenTypeOfCollection` on the validator, passing this contract address and the token-type.
+    ///      - If the call fails (reverts or returns error), emits `TokenTypeRegistrationFailed`.
     function _registerTokenType(address validator) internal {
         if (validator != address(0)) {
             uint256 validatorCodeSize;
+
             assembly {
+                // Inline assembly used to retrieve the size of the code at `validator`.
+                // A non-zero size indicates the address hosts a contract (deployed code).
                 validatorCodeSize := extcodesize(validator)
             }
             if (validatorCodeSize > 0) {

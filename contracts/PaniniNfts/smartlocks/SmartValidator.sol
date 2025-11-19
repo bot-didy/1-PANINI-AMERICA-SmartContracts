@@ -1,14 +1,24 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import {AccessControlUpgradeable} from "../openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import {Initializable} from "../openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {
+    AccessControlUpgradeable
+} from "../openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import {
+    Initializable
+} from "../openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 //SmartValidator
 abstract contract SmartValidator is Initializable, AccessControlUpgradeable {
     bytes32 public constant WHITELISTED_MARKETPLACE =
         keccak256("WHITELISTED_MARKETPLACE");
     bool public paniniLock;
+
+    event PaniniLockStatusChanged(
+        address indexed admin,
+        bool oldStatus,
+        bool newStatus
+    );
 
     error InvalidOperator(string errorText);
 
@@ -58,11 +68,13 @@ abstract contract SmartValidator is Initializable, AccessControlUpgradeable {
      * @param _status Boolean value representing the new lock state:
      * - `true` to enable the lock.
      * - `false` to disable the lock.
-     *
+     * Emits - PaniniLockStatusChanged - includes msg.sender, oldstatus, newstatus
      * Requirements:
      * - Caller must have the `DEFAULT_ADMIN_ROLE`.
      */
     function setPaniniLock(bool _status) public onlyRole(DEFAULT_ADMIN_ROLE) {
+        bool oldStatus = paniniLock;
         paniniLock = _status;
+        emit PaniniLockStatusChanged(_msgSender(), oldStatus, _status);
     }
 }
