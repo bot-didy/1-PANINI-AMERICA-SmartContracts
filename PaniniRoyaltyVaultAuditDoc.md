@@ -8,7 +8,7 @@ While NFTs are bridged to Ethereum and traded across public marketplaces, royalt
 
 ## 1.2 Purpose of This Document
 
-This technical documentation outlines the architecture, behavior, and access model of the `PaniniRoyaltyVault` smart contract, which governs treasury operations such as ETH/ERC20 custody, controlled withdrawals, token swaps via Uniswap V2, and access whitelisting.
+This technical documentation outlines the architecture, behavior, and access model of the `PaniniRoyaltyVault` smart contract, which governs treasury operations such as ETH/ERC20 custody, controlled withdrawals, token swaps via Uniswap V3, and access whitelisting.
 
 ---
 
@@ -29,7 +29,7 @@ This technical documentation outlines the architecture, behavior, and access mod
 |--------------------------|---------------------------------------------------------------------|
 | Upgradeable Design       | Built using OpenZeppelin's proxy pattern (Initializable, Ownable)  |
 | Role-Based Access        | Managers and receivers must be explicitly whitelisted by owner     |
-| Token Swap Support       | Swaps ETH or ERC20 via Uniswap V2 Router                           |
+| Token Swap Support       | Swaps ETH or ERC20 via Uniswap V3 Router                           |
 | ETH/ERC20 Withdrawals    | Only whitelisted receivers may receive assets                      |
 | Vault Manager Authorization | Vault managers control swap/withdraw/approve operations         |
 | Pausable                 | VaultPauser,Owner can pause/unpause critical functions during emergencies       |
@@ -83,7 +83,7 @@ This technical documentation outlines the architecture, behavior, and access mod
 |-----------------|-----------------------------------------|
 | Smart Contract  | Solidity (v0.8.28)                      |
 | Upgradeability  | OpenZeppelin Upgradeable Proxy Pattern |
-| Token Swaps     | Uniswap V2 Router                       |
+| Token Swaps     | Uniswap V3 Router                       |
 | Permissions     | Role-based via storage mappings        |
 | Scripting       | Hardhat + Ethers + TypeScript (external only) |
 
@@ -139,7 +139,7 @@ npx hardhat test test/PaniniRoyalty.test.ts
 * `swapEthForToken(amountIn, amountOutMin, outToken, recipient)`
 * `swapTokenForToken(amountIn, amountOutMin, inToken, outToken, recipient)`
 
-> Uses Uniswap V2 router for deterministic path-based swaps
+> Uses Uniswap V3 router for deterministic path-based swaps
 
 #### Whitelist Management
 
@@ -148,7 +148,7 @@ npx hardhat test test/PaniniRoyalty.test.ts
 
 #### Token Approvals
 
-* `approveTokenForSwap(token, amount)` — grants router swap allowance
+* `setTokenAllowance(token, amount)` — grants router swap allowance
 
 #### Emergency Pause
 
@@ -163,6 +163,7 @@ npx hardhat test test/PaniniRoyalty.test.ts
 | `Withdrawn()`                      | ETH withdrawal                   |
 | `WithdrawnERC20()`                 | ERC20 token withdrawal           |
 | `ETHSwappedForToken()`             | After ETH swap via Uniswap       |
+| `TokrnSwappedForToken()`             | After ETH swap via Uniswap       |
 | `VaultManagerAccessUpdated()`      | Owner updates vault manager list |
 | `ReceiverWhitelistStatusChanged()` | Owner updates receiver whitelist |
 
@@ -179,8 +180,8 @@ npx hardhat test test/PaniniRoyalty.test.ts
 
 | Area            | Limitation/Note                                                 |
 | --------------- | --------------------------------------------------------------- |
-| Swap Router     | Uses Uniswap V2 — upgradable to Uniswap V3 for slippage control |
-| ERC20 Approvals | Manual `approveTokenForSwap()` required — can be optimized      |
+| Swap Router     | Relying on Uniswap V3, If uniswap not working, Txns might fails |
+| No Fallback DEX | No Fallback DEXs for Swapping, if uniswap is not working.       |
 
 ---
 
@@ -188,7 +189,7 @@ npx hardhat test test/PaniniRoyalty.test.ts
 
 * ETH/ERC20 custody
 * Controlled withdrawal system
-* Uniswap V2 powered swaps (ETH → Token, Token → Token)
+* Uniswap V3 powered swaps (ETH → Token, Token → Token)
 * Role-based security with upgradeability and pausability
 * Safe, transparent event logging for audit trails
 
